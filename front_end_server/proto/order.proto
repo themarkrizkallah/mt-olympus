@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package proto;
+
+message OrderObj {
+    string ID = 1;
+    uint64 Amount = 2;
+    uint64 Price = 3;
+    bool Side = 4;
+    string CreatedAt = 5;
+}

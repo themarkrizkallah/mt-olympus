@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package proto;
+
+message TradeObj {
+    string TakerID = 1;
+    string MakerID = 2;
+    uint64 Amount = 3;
+    uint64 Price = 4;
+    string CreatedAt = 5;
+}
+

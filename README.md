@@ -1,29 +1,33 @@
 # exchange
-My implementation of a performant exchange
+This is my implementation of an exchange platform powered by a performant matching engine.
 
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine for testing purposes.
+These instructions will get you a copy of the project up & running on your local machine.
 
 ### Prerequisites
 
-You need to have [Docker](https://docs.docker.com/install/) and `docker-compose` installed.
+You need to have [Docker](https://docs.docker.com/install/) & [docker-compose](https://docs.docker.com/compose/install/) installed.
 
 ### Installation
-Installation is very simple, simply clone the repo.
+Installation is very simple, simply clone the repo
 ```
 $ git clone https://github.com/themarkrizkallah/exchange.git
 ```
 
 ### Running the project
-Go to the project directory (`exchange/`) and run:
 ```
+$ cd {YOUR_PATH}/exchange
 $ docker-compose up --build
 ```
 
-Once the containers are up and running, you can make API calls to the front-end server on `localhost:8080`
+Once the containers are up & running, you can make API calls to the front-end server on [localhost:8080](localhost:8080).
 
-For more information, consult *front_end_server*'s [README](./front_end_server/README.md)
 
-### Comments
-The project is in very early stages, expect most of this documentation and code to change.
+### How to Use
+Refer to this [README](./front_end_server/README.md) for all the available endpoints & the API Spec.
+
+
+## Comments
+The project is in its very early stages. Expect most of the code & documentation to change.
+

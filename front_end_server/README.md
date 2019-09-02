@@ -1,15 +1,11 @@
 # front_end_server
-This **REST** Go server is where it all starts!
+This REST Go server is where it all starts!
 
 ## Overview
-This server acts as the entry point to the platform. 
-
-Its main purpose is to handle user signup and authentication as well as to act as a proxy between the **React** front-end (**TODO**) and the gRPC server responsible for all interactions with the matching engine.
-
-
+This server acts as the entry point to the platform. Its main purpose is to handle user signup and authentication as well as acting as as a proxy between the front-end and the gRPC server ([grpc_server](../grpc_server/README.md)) responsible for all interactions with the matching engine.
 
 ## API Specs
-By default, the server will be listening on `localhost:8080`
+By default, the server will be listening on [localhost:8080](localhost:8080). This can be modified here: [docker-compose.yml](../docker-compose.yml)
 
 ### `POST /orders`
 Endpoint to create a new limit order. The payload should have the following fields:

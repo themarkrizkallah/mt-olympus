@@ -14,6 +14,9 @@ var (
 	KafkaPort    string
 	KafkaVersion string
 
+	Base  string
+	Quote string
+
 	// Kafka Consumer Vars
 	KafkaConsGroup        string
 	KafkaConsReturnErrors bool
@@ -37,6 +40,9 @@ func Init() {
 		log.Println("Error reading ORDERBOOK_CAP, defaulting to 100")
 		OrderBookCap = 100
 	}
+
+	Base = os.Getenv("BASE")
+	Quote = os.Getenv("QUOTE")
 
 	KafkaHost = os.Getenv("KAFKA_HOST")
 	KafkaPort = os.Getenv("KAFKA_PORT")

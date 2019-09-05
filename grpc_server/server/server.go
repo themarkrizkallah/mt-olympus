@@ -13,18 +13,24 @@ import (
 
 type Server struct{}
 
-func (s *Server) CreateOrder(c context.Context, order *pb.OrderObj) (*pb.CreateOrderResponse, error) {
-	log.Printf("Processing: %+v", order)
+func (s *Server) PlaceOrder(c context.Context, orderRequest *pb.OrderRequest) (*pb.PlaceOrderResponse, error) {
+	log.Printf("Processing: %+v\n", orderRequest)
 
-	data, err := proto.Marshal(order)
+	data, err := proto.Marshal(orderRequest)
 	if err != nil {
-		log.Fatal("Marshaling error: ", err)
+		log.Println("Marshaling error: ", err)
+		return &pb.PlaceOrderResponse{Body: ""}, err
 	}
 
-	kafka.Producer.Input() <- &sarama.ProducerMessage{
+	msg := &sarama.ProducerMessage{
 		Topic: "orders",
 		Value: sarama.ByteEncoder(data),
 	}
 
-	return &pb.CreateOrderResponse{Response: "Cool"}, nil
+	_, _, err = kafka.Producer.SendMessage(msg)
+	if err != nil {
+		return &pb.PlaceOrderResponse{Body: ""}, err
+	}
+
+	return &pb.PlaceOrderResponse{Body: "Order successfully placed."}, nil
 }

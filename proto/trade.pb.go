@@ -6,6 +6,7 @@ package proto
 import (
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
+	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	math "math"
 )
 
@@ -20,92 +21,172 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
-type TradeObj struct {
-	TakerID              string   `protobuf:"bytes,1,opt,name=TakerID,proto3" json:"TakerID,omitempty"`
-	MakerID              string   `protobuf:"bytes,2,opt,name=MakerID,proto3" json:"MakerID,omitempty"`
-	Amount               uint64   `protobuf:"varint,3,opt,name=Amount,proto3" json:"Amount,omitempty"`
-	Price                uint64   `protobuf:"varint,4,opt,name=Price,proto3" json:"Price,omitempty"`
-	CreatedAt            string   `protobuf:"bytes,5,opt,name=CreatedAt,proto3" json:"CreatedAt,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+type TradeMessage struct {
+	TakerId              string               `protobuf:"bytes,1,opt,name=taker_id,json=takerId,proto3" json:"taker_id,omitempty"`
+	MakerId              string               `protobuf:"bytes,2,opt,name=maker_id,json=makerId,proto3" json:"maker_id,omitempty"`
+	TakerOid             string               `protobuf:"bytes,3,opt,name=taker_oid,json=takerOid,proto3" json:"taker_oid,omitempty"`
+	MakerOid             string               `protobuf:"bytes,4,opt,name=maker_oid,json=makerOid,proto3" json:"maker_oid,omitempty"`
+	Amount               uint64               `protobuf:"varint,5,opt,name=amount,proto3" json:"amount,omitempty"`
+	Price                uint64               `protobuf:"varint,6,opt,name=price,proto3" json:"price,omitempty"`
+	Base                 string               `protobuf:"bytes,7,opt,name=base,proto3" json:"base,omitempty"`
+	Quote                string               `protobuf:"bytes,8,opt,name=quote,proto3" json:"quote,omitempty"`
+	ExecutedAt           *timestamp.Timestamp `protobuf:"bytes,9,opt,name=executed_at,json=executedAt,proto3" json:"executed_at,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
+	XXX_unrecognized     []byte               `json:"-"`
+	XXX_sizecache        int32                `json:"-"`
 }
 
-func (m *TradeObj) Reset()         { *m = TradeObj{} }
-func (m *TradeObj) String() string { return proto.CompactTextString(m) }
-func (*TradeObj) ProtoMessage()    {}
-func (*TradeObj) Descriptor() ([]byte, []int) {
+func (m *TradeMessage) Reset()         { *m = TradeMessage{} }
+func (m *TradeMessage) String() string { return proto.CompactTextString(m) }
+func (*TradeMessage) ProtoMessage()    {}
+func (*TradeMessage) Descriptor() ([]byte, []int) {
 	return fileDescriptor_ee944bd90e8a0312, []int{0}
 }
 
-func (m *TradeObj) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_TradeObj.Unmarshal(m, b)
+func (m *TradeMessage) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TradeMessage.Unmarshal(m, b)
 }
-func (m *TradeObj) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_TradeObj.Marshal(b, m, deterministic)
+func (m *TradeMessage) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TradeMessage.Marshal(b, m, deterministic)
 }
-func (m *TradeObj) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_TradeObj.Merge(m, src)
+func (m *TradeMessage) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TradeMessage.Merge(m, src)
 }
-func (m *TradeObj) XXX_Size() int {
-	return xxx_messageInfo_TradeObj.Size(m)
+func (m *TradeMessage) XXX_Size() int {
+	return xxx_messageInfo_TradeMessage.Size(m)
 }
-func (m *TradeObj) XXX_DiscardUnknown() {
-	xxx_messageInfo_TradeObj.DiscardUnknown(m)
+func (m *TradeMessage) XXX_DiscardUnknown() {
+	xxx_messageInfo_TradeMessage.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_TradeObj proto.InternalMessageInfo
+var xxx_messageInfo_TradeMessage proto.InternalMessageInfo
 
-func (m *TradeObj) GetTakerID() string {
+func (m *TradeMessage) GetTakerId() string {
 	if m != nil {
-		return m.TakerID
+		return m.TakerId
 	}
 	return ""
 }
 
-func (m *TradeObj) GetMakerID() string {
+func (m *TradeMessage) GetMakerId() string {
 	if m != nil {
-		return m.MakerID
+		return m.MakerId
 	}
 	return ""
 }
 
-func (m *TradeObj) GetAmount() uint64 {
+func (m *TradeMessage) GetTakerOid() string {
+	if m != nil {
+		return m.TakerOid
+	}
+	return ""
+}
+
+func (m *TradeMessage) GetMakerOid() string {
+	if m != nil {
+		return m.MakerOid
+	}
+	return ""
+}
+
+func (m *TradeMessage) GetAmount() uint64 {
 	if m != nil {
 		return m.Amount
 	}
 	return 0
 }
 
-func (m *TradeObj) GetPrice() uint64 {
+func (m *TradeMessage) GetPrice() uint64 {
 	if m != nil {
 		return m.Price
 	}
 	return 0
 }
 
-func (m *TradeObj) GetCreatedAt() string {
+func (m *TradeMessage) GetBase() string {
 	if m != nil {
-		return m.CreatedAt
+		return m.Base
 	}
 	return ""
 }
 
+func (m *TradeMessage) GetQuote() string {
+	if m != nil {
+		return m.Quote
+	}
+	return ""
+}
+
+func (m *TradeMessage) GetExecutedAt() *timestamp.Timestamp {
+	if m != nil {
+		return m.ExecutedAt
+	}
+	return nil
+}
+
+type TradeMessages struct {
+	TradeMessage         []*TradeMessage `protobuf:"bytes,1,rep,name=trade_message,json=tradeMessage,proto3" json:"trade_message,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
+	XXX_unrecognized     []byte          `json:"-"`
+	XXX_sizecache        int32           `json:"-"`
+}
+
+func (m *TradeMessages) Reset()         { *m = TradeMessages{} }
+func (m *TradeMessages) String() string { return proto.CompactTextString(m) }
+func (*TradeMessages) ProtoMessage()    {}
+func (*TradeMessages) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ee944bd90e8a0312, []int{1}
+}
+
+func (m *TradeMessages) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TradeMessages.Unmarshal(m, b)
+}
+func (m *TradeMessages) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TradeMessages.Marshal(b, m, deterministic)
+}
+func (m *TradeMessages) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TradeMessages.Merge(m, src)
+}
+func (m *TradeMessages) XXX_Size() int {
+	return xxx_messageInfo_TradeMessages.Size(m)
+}
+func (m *TradeMessages) XXX_DiscardUnknown() {
+	xxx_messageInfo_TradeMessages.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TradeMessages proto.InternalMessageInfo
+
+func (m *TradeMessages) GetTradeMessage() []*TradeMessage {
+	if m != nil {
+		return m.TradeMessage
+	}
+	return nil
+}
+
 func init() {
-	proto.RegisterType((*TradeObj)(nil), "proto.TradeObj")
+	proto.RegisterType((*TradeMessage)(nil), "proto.TradeMessage")
+	proto.RegisterType((*TradeMessages)(nil), "proto.TradeMessages")
 }
 
 func init() { proto.RegisterFile("trade.proto", fileDescriptor_ee944bd90e8a0312) }
 
 var fileDescriptor_ee944bd90e8a0312 = []byte{
-	// 138 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x2e, 0x29, 0x4a, 0x4c,
-	0x49, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x05, 0x53, 0x4a, 0x5d, 0x8c, 0x5c, 0x1c,
-	0x21, 0x20, 0x61, 0xff, 0xa4, 0x2c, 0x21, 0x09, 0x2e, 0xf6, 0x90, 0xc4, 0xec, 0xd4, 0x22, 0x4f,
-	0x17, 0x09, 0x46, 0x05, 0x46, 0x0d, 0xce, 0x20, 0x18, 0x17, 0x24, 0xe3, 0x0b, 0x95, 0x61, 0x82,
-	0xc8, 0x40, 0xb9, 0x42, 0x62, 0x5c, 0x6c, 0x8e, 0xb9, 0xf9, 0xa5, 0x79, 0x25, 0x12, 0xcc, 0x0a,
-	0x8c, 0x1a, 0x2c, 0x41, 0x50, 0x9e, 0x90, 0x08, 0x17, 0x6b, 0x40, 0x51, 0x66, 0x72, 0xaa, 0x04,
-	0x0b, 0x58, 0x18, 0xc2, 0x11, 0x92, 0xe1, 0xe2, 0x74, 0x2e, 0x4a, 0x4d, 0x2c, 0x49, 0x4d, 0x71,
-	0x2c, 0x91, 0x60, 0x05, 0x9b, 0x84, 0x10, 0x48, 0x62, 0x03, 0xbb, 0xc9, 0x18, 0x10, 0x00, 0x00,
-	0xff, 0xff, 0x8e, 0xbb, 0x8e, 0x1f, 0xa9, 0x00, 0x00, 0x00,
+	// 267 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x4c, 0x90, 0x41, 0x4f, 0xb3, 0x40,
+	0x10, 0x86, 0x43, 0x0b, 0xb4, 0x0c, 0xed, 0x65, 0xbf, 0x2f, 0x66, 0xad, 0x07, 0x49, 0x4f, 0x9c,
+	0x68, 0x52, 0x2f, 0x26, 0x9e, 0x3c, 0xf6, 0x60, 0x4c, 0x48, 0xef, 0x64, 0x29, 0x23, 0x21, 0xba,
+	0x2e, 0xc2, 0x90, 0xf8, 0x3f, 0xfc, 0xc3, 0x86, 0x99, 0x62, 0x38, 0xed, 0x3e, 0xf3, 0xbc, 0x33,
+	0x87, 0x17, 0x62, 0xea, 0x4c, 0x85, 0x59, 0xdb, 0x39, 0x72, 0x2a, 0xe0, 0x67, 0x77, 0x5f, 0x3b,
+	0x57, 0x7f, 0xe0, 0x81, 0xa9, 0x1c, 0xde, 0x0e, 0xd4, 0x58, 0xec, 0xc9, 0xd8, 0x56, 0x72, 0xfb,
+	0x9f, 0x05, 0x6c, 0xce, 0xe3, 0xde, 0x0b, 0xf6, 0xbd, 0xa9, 0x51, 0xdd, 0xc2, 0x9a, 0xcc, 0x3b,
+	0x76, 0x45, 0x53, 0x69, 0x2f, 0xf1, 0xd2, 0x28, 0x5f, 0x31, 0x9f, 0xaa, 0x51, 0xd9, 0x49, 0x2d,
+	0x44, 0xd9, 0xab, 0xba, 0x83, 0x48, 0xb6, 0x5c, 0x53, 0xe9, 0x25, 0x3b, 0x39, 0xf3, 0xda, 0xb0,
+	0xb4, 0x7f, 0xd2, 0x17, 0x69, 0x27, 0x79, 0x03, 0xa1, 0xb1, 0x6e, 0xf8, 0x24, 0x1d, 0x24, 0x5e,
+	0xea, 0xe7, 0x57, 0x52, 0xff, 0x21, 0x68, 0xbb, 0xe6, 0x82, 0x3a, 0xe4, 0xb1, 0x80, 0x52, 0xe0,
+	0x97, 0xa6, 0x47, 0xbd, 0xe2, 0x2b, 0xfc, 0x1f, 0x93, 0x5f, 0x83, 0x23, 0xd4, 0x6b, 0x1e, 0x0a,
+	0xa8, 0x27, 0x88, 0xf1, 0x1b, 0x2f, 0x03, 0x61, 0x55, 0x18, 0xd2, 0x51, 0xe2, 0xa5, 0xf1, 0x71,
+	0x97, 0x49, 0x1f, 0xd9, 0xd4, 0x47, 0x76, 0x9e, 0xfa, 0xc8, 0x61, 0x8a, 0x3f, 0xd3, 0xfe, 0x04,
+	0xdb, 0x79, 0x29, 0xbd, 0x7a, 0x84, 0x2d, 0xb7, 0x5b, 0x58, 0x99, 0x68, 0x2f, 0x59, 0xa6, 0xf1,
+	0xf1, 0x9f, 0x1c, 0xca, 0xe6, 0xe1, 0x7c, 0x43, 0x33, 0x2a, 0x43, 0x4e, 0x3c, 0xfc, 0x06, 0x00,
+	0x00, 0xff, 0xff, 0xa3, 0xa1, 0x0b, 0x4e, 0x9e, 0x01, 0x00, 0x00,
 }

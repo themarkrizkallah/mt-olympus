@@ -1,8 +1,4 @@
-/third_party/
-
 .idea/
-/matcher/.idea/
-/grpc_server/.idea/
-/front_end_server/.idea/
+./*/.idea/
 
 *.DS_Store

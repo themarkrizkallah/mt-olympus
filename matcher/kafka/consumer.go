@@ -10,12 +10,6 @@ import (
 	"matcher/env"
 )
 
-var (
-	consumer       Consumer
-	consumerClient sarama.ConsumerGroup
-	topics         = []string{"orders"}
-)
-
 // Consumer represents a Sarama consumer group consumer
 type Consumer struct {
 	Ready chan bool
@@ -39,28 +33,34 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 	// Do not move the code below to a goroutine.
 	// The `ConsumeClaim` itself is called within a goroutine, see:
 	// https://github.com/Shopify/sarama/blob/master/consumer_group.go#L27-L29
+	orderbook := engine.GetOrderBook()
+
 	for message := range claim.Messages() {
-		var order engine.Order
+		order, err := engine.ProtoToOrder(message.Value)
+		if err != nil {
+			log.Printf("Error decoding message: %v\n", message)
+			continue
+		}
 
-		order.FromProto(message.Value) // Decode the message
-
-		log.Printf("Processing: %+v", order)
-
-		orderbook := engine.GetOrderBook()
+		log.Printf("Processing: %+v\n", order)
 		trades := orderbook.Process(order) // Process the order
 
 		if len(trades) > 0 {
 			fmt.Printf("Completed Trade(s): %+v\n", trades)
-		}
 
-		// Send trades to message queue
-		for _, trade := range trades {
-			rawTrade := trade.ToProto()
-			Producer.Input() <- &sarama.ProducerMessage{
+			// Send trades to message queue
+			producer.Input() <- &sarama.ProducerMessage{
 				Topic: "trades",
-				Value: sarama.ByteEncoder(rawTrade),
+				Value: sarama.ByteEncoder(engine.TradesToProto(trades)),
 			}
 		}
+
+		//for _, trade := range trades {
+		//	producer.Input() <- &sarama.ProducerMessage{
+		//		Topic: "trades",
+		//		Value: sarama.ByteEncoder(trade.ToProto()),
+		//	}
+		//}
 
 		// Mark the message as processed
 		session.MarkMessage(message, "")
@@ -69,20 +69,8 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 	return nil
 }
 
-func GetConsumerClient() *sarama.ConsumerGroup{
-	return &consumerClient
-}
-
-func GetConsumer() *Consumer {
-	return &consumer
-}
-
-func GetConsumerTopics() []string{
-	return topics
-}
-
-func CreateConsumer() {
-	log.Println("Starting a new Sarama consumer")
+func SetupConsumer(brokers []string) (Consumer, sarama.ConsumerGroup, error){
+	log.Println("Starting a new Sarama consumer...")
 
 	version, err := sarama.ParseKafkaVersion(env.KafkaVersion)
 	if err != nil {
@@ -98,16 +86,12 @@ func CreateConsumer() {
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 
 	//Setup a new Sarama consumer group
-	consumer = Consumer{
+	consumer := Consumer{
 		Ready: make(chan bool),
 	}
 
-	brokers := []string{fmt.Sprintf("%v:%v", env.KafkaHost, env.KafkaPort)}
 
-	consumerClient, err = sarama.NewConsumerGroup(brokers, env.KafkaConsGroup, config)
-	if err != nil {
-		log.Fatalln("Unable to connect consumer to kafka server")
-	}
+	consumerClient, err := sarama.NewConsumerGroup(brokers, env.KafkaConsGroup, config)
 
-	log.Println("Done setting up consumer group...")
+	return consumer, consumerClient, err
 }

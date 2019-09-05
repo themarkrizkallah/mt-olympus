@@ -1,21 +1,49 @@
 package order
 
-import "time"
+import (
+	"time"
+
+	"github.com/golang/protobuf/ptypes"
+
+	pb "front_end_server/proto"
+)
 
 type Payload struct {
-	ID     string `json:"id"`
-	Amount uint64 `json:"amount"`
-	Price  uint64 `json:"price"`
-	Side   bool   `json:"side"`
+	UserId  string  `json:"user_id"`
+	OrderId string  `json:"order_id"`
+	Amount  uint64  `json:"amount"`
+	Price   uint64  `json:"price"`
+	Side    pb.Side `json:"side"`
+	Type    pb.Type `json:"type"`
 }
 
-// Parse Parses a UserPayload into a User
-func (payload *Payload) Parse() Order {
+// ToOrderRequest converts an Order to an OrderRequest
+func (o *Order) ToOrderRequest() pb.OrderRequest {
+	ts, err := ptypes.TimestampProto(o.CreatedAt)
+	if err != nil {
+		panic(err)
+	}
+
+	return pb.OrderRequest{
+		UserId:    o.UserId,
+		OrderId:   o.OrderId,
+		Amount:    o.Amount,
+		Price:     o.Price,
+		Side:      o.Side,
+		Type:      o.Type,
+		CreatedAt: ts,
+	}
+}
+
+// Parse parses a Payload into an Order
+func (p *Payload) Parse() Order {
 	return Order{
-		ID:        payload.ID,
-		Amount:    payload.Amount,
-		Price:     payload.Price,
-		Side:      payload.Side,
-		CreatedAt: time.Now().UTC().Format(time.RFC3339),
+		UserId:    p.UserId,
+		OrderId:   p.OrderId,
+		Amount:    p.Amount,
+		Price:     p.Price,
+		Side:      p.Side,
+		Type:      p.Type,
+		CreatedAt: time.Now(),
 	}
 }

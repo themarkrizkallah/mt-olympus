@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -13,57 +14,66 @@ import (
 	"matcher/kafka"
 )
 
-func startMatcher(){
-	kafka.CreateProducer()
-	kafka.CreateConsumer()
+func main() {
+	env.Init()
+	engine.InitializeOrderBook(env.OrderBookCap)
+	startMatcher()
+}
 
-	client := kafka.GetConsumerClient()
-	consumer := kafka.GetConsumer()
+func startMatcher(){
+	brokers := []string{fmt.Sprintf("%v:%v", env.KafkaHost, env.KafkaPort)}
+	topics	:= []string{"orders"}
+
+	producer, err := kafka.SetupProducer(brokers)
+	if err != nil {
+		log.Fatal("Unable to connect async producer to kafka server:", err)
+	}
+
+	log.Println("Async producer up and running!...")
+	defer (*producer).Close()
+
+	consumer, client, err := kafka.SetupConsumer(brokers)
+	if err != nil {
+		log.Fatal("Unable to connect consumer group to kafka server:", err)
+	}
+
+	log.Println("Connected to consumer group!...")
+	defer client.Close()
+
 	ctx, cancel := context.WithCancel(context.Background())
-	topics := kafka.GetConsumerTopics()
+	defer cancel()
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-
 		for {
-			if err := (*client).Consume(ctx, topics, consumer); err != nil {
+			if err := client.Consume(ctx, topics, &consumer); err != nil {
 				log.Panicf("Error from consumer: %v", err)
 			}
-
 			// check if context was cancelled, signaling that the consumer should stop
 			if ctx.Err() != nil {
 				return
 			}
-			consumer.Ready = make(chan bool)
+			consumer.Ready = make(chan bool, 1)
 		}
 	}()
 
 	<-consumer.Ready // Await till the consumer has been set up
 	log.Println("Sarama consumer up and running!...")
 
-	sigterm := make(chan os.Signal, 1)
-	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 
 	select {
 	case <-ctx.Done():
 		log.Println("terminating: context cancelled")
-	case <-sigterm:
+	case <-sig:
 		log.Println("terminating: via signal")
 	}
 
-	cancel()
 	wg.Wait()
-
-	if err := (*client).Close(); err != nil {
+	if err = client.Close(); err != nil {
 		log.Panicf("Error closing client: %v", err)
 	}
-}
-
-
-func main() {
-	env.Init()
-	engine.InitializeOrderBook(env.OrderBookCap)
-	startMatcher()
 }

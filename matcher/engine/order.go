@@ -1,50 +1,64 @@
 package engine
 
 import (
-	"log"
+	"time"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
 
 	pb "matcher/proto"
 )
 
 type Order struct {
-	ID        string
-	Amount    uint64
-	Price     uint64
-	Side      bool
-	CreatedAt string
+	UserId     string
+	OrderId    string
+	Amount     uint64
+	Price      uint64
+	Side       pb.Side
+	Type       pb.Type
+	CreatedAt  time.Time
+	ReceivedAt time.Time
 }
 
-func (order *Order) FromProto(msg []byte) {
-	orderMessage := &pb.OrderObj{}
-	err := proto.Unmarshal(msg, orderMessage)
+func (o *Order) ToProto(msg []byte) error {
+	orderRequest := &pb.OrderRequest{}
 
+	err := proto.Unmarshal(msg, orderRequest)
 	if err != nil {
-		log.Fatalln("Error unmarshalling:", err)
+		return err
 	}
 
-	order.ID = orderMessage.ID
-	order.Amount = orderMessage.Amount
-	order.Price = orderMessage.Price
-	order.Side = orderMessage.Side
-	order.CreatedAt = orderMessage.CreatedAt
+	o.UserId = orderRequest.UserId
+	o.OrderId = orderRequest.OrderId
+	o.Amount = orderRequest.Amount
+	o.Price = orderRequest.Price
+	o.Side = orderRequest.Side
+	o.Type = orderRequest.Type
+	o.CreatedAt, _ = ptypes.Timestamp(orderRequest.CreatedAt)
+	o.ReceivedAt = time.Now()
+
+	return nil
 }
 
-func (order *Order) ToProto() []byte {
-	orderMessage := &pb.OrderObj{
-		ID:        order.ID,
-		Amount:    order.Amount,
-		Price:     order.Price,
-		Side:      order.Side,
-		CreatedAt: order.CreatedAt,
-	}
+func ProtoToOrder(msg []byte) (Order, error) {
+	orderRequest := &pb.OrderRequest{}
 
-	protoMsg, err := proto.Marshal(orderMessage)
-
+	err := proto.Unmarshal(msg, orderRequest)
 	if err != nil {
-		log.Fatalln("Error marshalling:", err)
+		return Order{}, err
 	}
 
-	return protoMsg
+	ts, _ := ptypes.Timestamp(orderRequest.CreatedAt)
+	order := Order{
+		UserId:     orderRequest.UserId,
+		OrderId:    orderRequest.OrderId,
+		Amount:     orderRequest.Amount,
+		Price:      orderRequest.Price,
+		Side:       orderRequest.Side,
+		Type:       orderRequest.Type,
+		CreatedAt:  ts,
+		ReceivedAt: time.Now(),
+	}
+
+	return order, nil
 }

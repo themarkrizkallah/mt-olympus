@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 
@@ -14,9 +15,17 @@ import (
 	"grpc_server/server"
 )
 
+func main() {
+	env.Init()
+	startServer()
+}
+
 func startServer() {
 	// GRPC Setup
-	var grpcServer *grpc.Server
+	var (
+		grpcServer *grpc.Server
+		brokers = []string{fmt.Sprintf("%v:%v", env.KafkaHost, env.KafkaPort)}
+	)
 
 	if env.Debug {
 		log.Printf("Network: %v\n", env.Network)
@@ -39,8 +48,7 @@ func startServer() {
 	reflection.Register(grpcServer)
 
 	// Setup Kafka Producer
-	kafka.CreateProducer()
-	//kafka.CreateConsumer()
+	_, err:= kafka.CreateSyncProducer(brokers)
 
 	listener, err := net.Listen(env.Network, ":" + env.Port)
 	if err != nil {
@@ -52,9 +60,4 @@ func startServer() {
 	if err := grpcServer.Serve(listener); err != nil {
 		panic(err)
 	}
-}
-
-func main() {
-	env.Init()
-	startServer()
 }

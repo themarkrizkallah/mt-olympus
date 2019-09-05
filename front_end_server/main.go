@@ -10,12 +10,13 @@ import (
 
 func startServer(){
 	client.InitExchangeService()
+	defer client.Cleanup()
 
-	router := gin.Default()
+	r := gin.Default()
 
-	router.POST("/orders/", order.CreateOrder)
+	r.POST("/orders/", order.CreateOrder)
 
-	err := router.Run()
+	err := r.Run()
 	if err != nil {
 		panic(err)
 	}

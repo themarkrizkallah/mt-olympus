@@ -1,12 +1,14 @@
 package engine
 
-import "fmt"
+import (
+	"time"
+
+	pb "matcher/proto"
+)
 
 // Process an order and return the trades generated before adding the remaining amount to the market
 func (ob *OrderBook) Process(order Order) []Trade {
-	fmt.Printf("Processing: %+v\n", order)
-
-	if order.Side {
+	if order.Side == pb.Side_BUY {
 		return ob.processLimitBuy(order)
 	}
 
@@ -30,7 +32,19 @@ func (ob *OrderBook) processLimitBuy(order Order) []Trade {
 
 			// Fill the entire order
 			if sellOrder.Amount >= order.Amount {
-				trade := Trade{order.ID, sellOrder.ID, order.Amount, sellOrder.Price}
+				trade := Trade{
+					TakerId:    order.UserId,
+					MakerId:    sellOrder.UserId,
+					TakerOid:   order.OrderId,
+					MakerOid:   sellOrder.OrderId,
+					Amount:     order.Amount,
+					Price:      sellOrder.Price,
+					Base:       ob.Base,
+					Quote:      ob.Quote,
+					ExecutedAt: time.Now(),
+				}
+
+				//trade := Trade{order.ID, sellOrder.ID, order.Amount, sellOrder.Price}
 				trades = append(trades, trade)
 
 				sellOrder.Amount -= order.Amount
@@ -42,7 +56,19 @@ func (ob *OrderBook) processLimitBuy(order Order) []Trade {
 			}
 			// Fill a partial order and continue
 			if sellOrder.Amount < order.Amount {
-				trade := Trade{order.ID, sellOrder.ID, sellOrder.Amount, sellOrder.Price}
+				trade := Trade{
+					TakerId:    order.UserId,
+					MakerId:    sellOrder.UserId,
+					TakerOid:   order.OrderId,
+					MakerOid:   sellOrder.OrderId,
+					Amount:     sellOrder.Amount,
+					Price:      sellOrder.Price,
+					Base:       ob.Base,
+					Quote:      ob.Quote,
+					ExecutedAt: time.Now(),
+				}
+
+				//trade := Trade{order.ID, sellOrder.ID, sellOrder.Amount, sellOrder.Price}
 				trades = append(trades, trade)
 
 				order.Amount -= sellOrder.Amount
@@ -73,17 +99,45 @@ func (ob *OrderBook) processLimitSell(order Order) []Trade {
 
 			// Fill the entire order
 			if buyOrder.Amount >= order.Amount {
-				trades = append(trades, Trade{order.ID, buyOrder.ID, order.Amount, buyOrder.Price})
+				trade := Trade{
+					TakerId:    order.UserId,
+					MakerId:    buyOrder.UserId,
+					TakerOid:   order.OrderId,
+					MakerOid:   buyOrder.OrderId,
+					Amount:     order.Amount,
+					Price:      buyOrder.Price,
+					Base:       ob.Base,
+					Quote:      ob.Quote,
+					ExecutedAt: time.Now(),
+				}
+
+				//trades = append(trades, Trade{order.ID, buyOrder.ID, order.Amount, buyOrder.Price})
+				trades = append(trades, trade)
 				buyOrder.Amount -= order.Amount
 				if buyOrder.Amount == 0 {
 					ob.removeBuyOrder(i)
 				}
+
 				return trades
 			}
 
 			// Fill a partial order and continue
 			if buyOrder.Amount < order.Amount {
-				trades = append(trades, Trade{order.ID, buyOrder.ID, buyOrder.Amount, buyOrder.Price})
+				//trades = append(trades, Trade{order.ID, buyOrder.ID, buyOrder.Amount, buyOrder.Price})
+				trade := Trade{
+					TakerId:    order.UserId,
+					MakerId:    buyOrder.UserId,
+					TakerOid:   order.OrderId,
+					MakerOid:   buyOrder.OrderId,
+					Amount:     buyOrder.Amount,
+					Price:      buyOrder.Price,
+					Base:       ob.Base,
+					Quote:      ob.Quote,
+					ExecutedAt: time.Now(),
+				}
+
+				trades = append(trades, trade)
+
 				order.Amount -= buyOrder.Amount
 				ob.removeBuyOrder(i)
 			}

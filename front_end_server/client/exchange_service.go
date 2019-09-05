@@ -52,6 +52,9 @@ func GetExchangeServiceClient() *pb.ExchangeServiceClient {
 	return &exchangeServiceClient
 }
 
-func GetExchangeServiceConn() *grpc.ClientConn {
-	return exchangeServiceConn
+func Cleanup(){
+	err := exchangeServiceConn.Close()
+	if err != nil {
+		log.Fatalln("Could not close connection:", err)
+	}
 }

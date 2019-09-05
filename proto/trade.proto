@@ -2,11 +2,20 @@ syntax = "proto3";
 
 package proto;
 
-message TradeObj {
-    string TakerID = 1;
-    string MakerID = 2;
-    uint64 Amount = 3;
-    uint64 Price = 4;
-    string CreatedAt = 5;
+import "google/protobuf/timestamp.proto";
+
+message TradeMessage {
+    string taker_id = 1;
+    string maker_id = 2;
+    string taker_oid = 3;
+    string maker_oid = 4;
+    uint64 amount = 5;
+    uint64 price = 6;
+    string base = 7;
+    string quote = 8;
+    google.protobuf.Timestamp executed_at = 9;
 }
 
+message TradeMessages {
+    repeated TradeMessage trade_message = 1;
+}

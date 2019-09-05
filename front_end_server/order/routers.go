@@ -1,7 +1,6 @@
 package order
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,21 +10,21 @@ import (
 
 func CreateOrder(c *gin.Context) {
 	var payload Payload
-	err := c.BindJSON(&payload)
 
+	err := c.BindJSON(&payload)
 	if err != nil {
-		panic(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
 	order := payload.Parse()
-	orderObj := order.ToProtoObj()
+	orderRequest := order.ToOrderRequest()
 	exchangeServiceClient := client.GetExchangeServiceClient()
 
-	if resp, err := (*exchangeServiceClient).CreateOrder(c, &orderObj); err != nil {
+	resp, err := (*exchangeServiceClient).PlaceOrder(c, &orderRequest)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"response": fmt.Sprint(resp.Response),
-		})
+		c.JSON(http.StatusOK, gin.H{"response": resp.Body})
 	}
 }

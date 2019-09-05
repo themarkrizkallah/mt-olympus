@@ -1,7 +1,6 @@
 package kafka
 
 import (
-	"fmt"
 	"log"
 	"time"
 
@@ -10,40 +9,27 @@ import (
 	"grpc_server/env"
 )
 
-var Producer sarama.AsyncProducer
+var Producer sarama.SyncProducer
 
-// Create the producer
-func CreateProducer(){
+func CreateSyncProducer(brokers []string) (*sarama.SyncProducer, error){
+	var err error
+
 	config := sarama.NewConfig()
-	config.Producer.Return.Successes = env.KafkaProdReturnSuccesses
-	config.Producer.Return.Errors = env.KafkaProdReturnErrors
-	config.Producer.RequiredAcks = sarama.WaitForAll
-
-	var (
-		prod      sarama.AsyncProducer
-		connected bool
-		err       error
-	)
-
-	brokers := []string{fmt.Sprintf("%v:%v", env.KafkaHost, env.KafkaPort)}
+	config.Producer.Return.Successes = true
+	config.Producer.Return.Errors = true
+	config.Producer.RequiredAcks = sarama.WaitForLocal
 
 	for i := uint64(0); i < env.KafkaProdRetryTimes; i++ {
-		log.Printf("Producer Retry #%v\n", i+1)
-		prod, err = sarama.NewAsyncProducer(brokers, config)
+		log.Println("sync producer retry #", i+1)
+		Producer, err = sarama.NewSyncProducer(brokers, config)
 
 		if err != nil {
 			time.Sleep(time.Duration(env.KafkaProdRetrySeconds) * time.Second)
-		} else {
-			connected = true
-			break
+			continue
 		}
+
+		return &Producer, nil
 	}
 
-	if !connected {
-		log.Fatal("Unable to connect producer to kafka server")
-	}
-
-	log.Println("Connected producer to kafka cluster...")
-
-	Producer = prod
+	return nil, err
 }

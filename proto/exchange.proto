@@ -4,10 +4,10 @@ package proto;
 
 import "order.proto";
 
-message CreateOrderResponse {
-    string Response = 1;
+message PlaceOrderResponse {
+    string body = 1;
 }
 
 service ExchangeService {
-    rpc CreateOrder(OrderObj) returns (CreateOrderResponse);
+    rpc PlaceOrder(OrderRequest) returns (PlaceOrderResponse);
 }

@@ -2,10 +2,25 @@ syntax = "proto3";
 
 package proto;
 
-message OrderObj {
-    string ID = 1;
-    uint64 Amount = 2;
-    uint64 Price = 3;
-    bool Side = 4;
-    string CreatedAt = 5;
+import "google/protobuf/timestamp.proto";
+
+enum Side {
+    SELL = 0;
+    BUY = 1;
+}
+
+enum Type {
+    LIMIT = 0;
+    MARKET = 1;
+    STOP = 2;
+}
+
+message OrderRequest {
+    string user_id = 1;
+    string order_id = 2;
+    uint64 amount = 3;
+    uint64 price = 4;
+    Side Side = 5;
+    Type type = 6;
+    google.protobuf.Timestamp created_at = 7;
 }

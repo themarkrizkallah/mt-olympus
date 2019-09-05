@@ -21,8 +21,7 @@ $ cd {YOUR_PATH}/exchange
 $ docker-compose up --build
 ```
 
-Once the containers are up & running, you can make API calls to the front-end server on [localhost:8080](localhost:8080).
-
+Once the containers are up & running, you can make API calls to the front-end server on [localhost:8080](http://localhost:8080/).
 
 ### How to Use
 Refer to this [README](./front_end_server/README.md) for all the available endpoints & the API Spec.

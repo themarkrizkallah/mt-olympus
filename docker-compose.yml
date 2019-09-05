@@ -65,30 +65,33 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
 
-  schema-registry:
-    image: confluentinc/cp-schema-registry:5.3.0
-    hostname: schema-registry
-    container_name: schema-registry
-    depends_on:
-      - zookeeper
-      - broker
-    ports:
-      - "8081:8081"
-    environment:
-      SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
-
-  rest-proxy:
-    image: confluentinc/cp-kafka-rest:5.3.0
-    depends_on:
-      - zookeeper
-      - broker
-      - schema-registry
-    ports:
-      - 8082:8082
-    hostname: rest-proxy
-    container_name: rest-proxy
-    environment:
-      KAFKA_REST_HOST_NAME: rest-proxy
-      KAFKA_REST_BOOTSTRAP_SERVERS: 'broker:29092'
-      KAFKA_REST_LISTENERS: "http://0.0.0.0:8082"
+"""
+ Might Use Later
+"""
+#  schema-registry:
+#    image: confluentinc/cp-schema-registry:5.3.0
+#    hostname: schema-registry
+#    container_name: schema-registry
+#    depends_on:
+#      - zookeeper
+#      - broker
+#    ports:
+#      - "8081:8081"
+#    environment:
+#      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+#      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
+#
+#  rest-proxy:
+#    image: confluentinc/cp-kafka-rest:5.3.0
+#    depends_on:
+#      - zookeeper
+#      - broker
+#      - schema-registry
+#    ports:
+#      - 8082:8082
+#    hostname: rest-proxy
+#    container_name: rest-proxy
+#    environment:
+#      KAFKA_REST_HOST_NAME: rest-proxy
+#      KAFKA_REST_BOOTSTRAP_SERVERS: 'broker:29092'
+#      KAFKA_REST_LISTENERS: "http://0.0.0.0:8082"

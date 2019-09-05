@@ -15,7 +15,3 @@ message TradeMessage {
     string quote = 8;
     google.protobuf.Timestamp executed_at = 9;
 }
-
-message TradeMessages {
-    repeated TradeMessage trade_message = 1;
-}

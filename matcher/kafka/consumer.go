@@ -47,20 +47,14 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 
 		if len(trades) > 0 {
 			fmt.Printf("Completed Trade(s): %+v\n", trades)
-
-			// Send trades to message queue
-			producer.Input() <- &sarama.ProducerMessage{
-				Topic: "trades",
-				Value: sarama.ByteEncoder(engine.TradesToProto(trades)),
-			}
 		}
 
-		//for _, trade := range trades {
-		//	producer.Input() <- &sarama.ProducerMessage{
-		//		Topic: "trades",
-		//		Value: sarama.ByteEncoder(trade.ToProto()),
-		//	}
-		//}
+		for _, trade := range trades {
+			producer.Input() <- &sarama.ProducerMessage{
+				Topic: "trades",
+				Value: sarama.ByteEncoder(trade.ToProto()),
+			}
+		}
 
 		// Mark the message as processed
 		session.MarkMessage(message, "")
@@ -89,7 +83,6 @@ func SetupConsumer(brokers []string) (Consumer, sarama.ConsumerGroup, error){
 	consumer := Consumer{
 		Ready: make(chan bool),
 	}
-
 
 	consumerClient, err := sarama.NewConsumerGroup(brokers, env.KafkaConsGroup, config)
 

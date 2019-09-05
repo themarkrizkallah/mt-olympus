@@ -63,7 +63,7 @@ func startMatcher(){
 	log.Println("Sarama consumer up and running!...")
 
 	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
 	select {
 	case <-ctx.Done():

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"front_end_server/common"
+	"front_end_server/users"
 	"github.com/gin-gonic/gin"
 
 	"front_end_server/client"
@@ -15,6 +17,9 @@ func startServer(){
 	r := gin.Default()
 
 	r.POST("/orders/", order.CreateOrder)
+	r.POST("/signup/", users.SignUp)
+	r.POST("/login/", users.Login)
+	r.GET("/users/", users.ListUsers)
 
 	err := r.Run()
 	if err != nil {
@@ -24,5 +29,7 @@ func startServer(){
 
 func main() {
 	env.Init()
+	common.InitMongo()
+	common.InitRedis()
 	startServer()
 }

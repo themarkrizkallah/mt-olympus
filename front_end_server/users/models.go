@@ -17,13 +17,13 @@ import (
 const collectionName = "users"
 
 type User struct {
-	Id        primitive.ObjectID `bson:"_id"`
-	UserName  string             `bson:"user_name"`
-	Email     string             `bson:"email"`
-	Password  string             `bson:"password"`
-	FirstName string             `bson:"first_name"`
-	LastName  string             `bson:"last_name"`
-	Address   string             `bson:"address"`
+	Id        primitive.ObjectID `json:"id" bson:"_id"`
+	UserName  string             `json:"user_name" bson:"user_name"`
+	Email     string             `json:"email" bson:"email"`
+	Password  string             `json:"password" bson:"password"`
+	FirstName string             `json:"first_name" bson:"first_name"`
+	LastName  string             `json:"last_name" bson:"last_name"`
+	Address   string             `json:"address" bson:"address"`
 }
 
 func FindUserByLoginPayload(payload LoginPayload) (User, error) {

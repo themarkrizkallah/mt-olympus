@@ -2,7 +2,6 @@ package users
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -45,7 +44,7 @@ func SignUp(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"response": fmt.Sprint("User created:", res.InsertedID)})
+	c.JSON(http.StatusOK, gin.H{"response": res.InsertedID})
 }
 
 func Login(c *gin.Context) {
@@ -102,7 +101,7 @@ func Login(c *gin.Context) {
 }
 
 func ListUsers(c *gin.Context) {
-	var users []User
+	var users []bson.M
 
 	collection := common.GetMongoDb().Collection(collectionName)
 
@@ -117,10 +116,7 @@ func ListUsers(c *gin.Context) {
 	defer cur.Close(ctx)
 
 	for cur.Next(ctx) {
-		var (
-			user   User
-			result bson.M
-		)
+		var result bson.M
 
 		err := cur.Decode(&result)
 		if err != nil {
@@ -128,10 +124,7 @@ func ListUsers(c *gin.Context) {
 			return
 		}
 
-		bsonBytes, _ := bson.Marshal(result)
-		_ = bson.Unmarshal(bsonBytes, &user)
-
-		users = append(users, user)
+		users = append(users, result)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"response": users})

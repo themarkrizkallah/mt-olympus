@@ -7,27 +7,71 @@ This server acts as the entry point to the platform. Its main purpose is to hand
 ## API Specs
 By default, the server will be listening on [localhost:8080](http://localhost:8080/). This can be modified here: [docker-compose.yml](../docker-compose.yml)
 
-### `POST /orders`
-Endpoint to create a new limit order. The payload should have the following fields:
+### `POST /signup`
+Endpoint to create a new user. The payload should have the following fields:
 
 ```json
 {
-	"user_id": "1",
-	"order_id": "1",
-	"amount": 2,
-	"price": 100,
-	"side": 1,
-	"type": 0
+  "user_name": "user",
+  "email": "user@domain.com",
+  "password": "$tR0Ng P4$$w0rD",
+  "first_name": "John",
+  "last_name": "Smith",
+  "address": "1 Boulevard Street"
+}
+```
+
+where `user_name` and `email` are unique.
+
+### `POST /login`
+Endpoint to log an user in. The payload should have the following fields:
+
+```json
+{
+  "user_name": "user",
+  "email": "user@domain.com",
+  "password": "$tR0Ng P4$$w0rD"
+}
+```
+**Note**: You only need to provide one of {`user_name`, `email`}. If both are provided, `user_name` is used to search
+MongoDB. Currently, this endpoint does not verify that the  provided`user_name` and `email` are related.
+
+The response body should return a cookie (`exchange_userCookie`) on success that can be used for other endpoints.
+
+### `GET /users`
+Endpoint to retrieve a json of all users. This endpoint requires a valid `exchange_userCookie` cookie to be passed in 
+with the request.
+
+The response body should look like:
+```json
+{
+  "response": [
+    {
+      "_id": "5d77c5cba06a043fe7e5063e",
+      "user_name": "user",
+      "email": "user@domain.com",
+      "password": "$argon2id$v=19$m=65536,t=3,p=2$Ity3IxYmiTFWpFnNbY1/BQ$2q8jkC1VrJ9hzEAn6n4waq51E+yGrcCytXaXeojTmrY",
+      "first_name": "John",
+      "last_name": "Smith",
+      "address": "1 Boulevard Street"
+    }
+  ]
+}
+```
+
+### `POST /orders`
+Endpoint to create a new order. The payload should have the following fields:
+
+```json
+{
+  "amount": 15,
+  "price": 100000,
+  "side": 1,
+  "type": 0
 }
 ```
 
 **Field Descriptions**:
-- `user_id`
-  - `string` corresponding to the authenticated user's id
-  - **Note**: This will be generated on the server side once user signups and authentication have been implemented
-- `order_id`
-  - `string` corresponding to the order id of the authenticated user
-  - **Note**: This will be generated on the server side once user signups and authentication have been implemented
 - `amount`:
   - `uint64` representing the number of units of the object to buy/sell
 - `price`:

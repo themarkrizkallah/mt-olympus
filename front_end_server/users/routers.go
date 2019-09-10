@@ -2,7 +2,7 @@ package users
 
 import (
 	"context"
-	"github.com/go-redis/redis"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -12,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"front_end_server/common"
+	"front_end_server/env"
 )
 
 const cookieName = "exchange_userCookie"
@@ -19,6 +20,7 @@ const cookieName = "exchange_userCookie"
 func SignUp(c *gin.Context) {
 	var payload UserPayload
 
+	log.Println("Binding payload...")
 	err := c.BindJSON(&payload)
 	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
@@ -37,23 +39,13 @@ func SignUp(c *gin.Context) {
 	}
 
 	payload.Password, _ = argon2id.CreateHash(payload.Password, argon2id.DefaultParams)
-	collection := common.GetMongoDb().Collection("users")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
-	defer cancel()
-
-	bsonBytes, err := bson.Marshal(payload)
-	if err != nil {
-		log.Panicln("Error marshalling:", err)
-	}
-
-	res, err := collection.InsertOne(ctx, bsonBytes)
+	res, err := InsertUserPayload(payload)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"response": res})
+	c.JSON(http.StatusOK, gin.H{"response": fmt.Sprint("User created:", res.InsertedID)})
 }
 
 func Login(c *gin.Context) {
@@ -71,7 +63,7 @@ func Login(c *gin.Context) {
 	if len(payload.UserName) == 0 && len(payload.Email) == 0 {
 		c.JSON(http.StatusForbidden, gin.H{"error": "One of {user_name, email} may not be empty"})
 		return
-	}else if len(payload.Password) == 0 {
+	} else if len(payload.Password) == 0 {
 		c.JSON(http.StatusForbidden, gin.H{"error": "password may not be empty"})
 		return
 	}
@@ -91,14 +83,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	client := common.GetRedisClient()
-	key, err := common.GenerateRandomString(256)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	err = client.Set(key, user.Id.String(), 60 * time.Second).Err()
+	key, err := common.NewUserSession(user.Id.Hex())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -119,25 +104,9 @@ func Login(c *gin.Context) {
 func ListUsers(c *gin.Context) {
 	var users []User
 
-	cookieValue, err := c.Cookie(cookieName)
-	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": "No authorization"})
-		return
-	}
-
 	collection := common.GetMongoDb().Collection(collectionName)
-	redisClient := common.GetRedisClient()
 
-	_, err = redisClient.Get(cookieValue).Result()
-	if err != redis.Nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Authorization expired"})
-		return
-	} else if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(env.MongoRetrySeconds)*time.Second)
 	defer cancel()
 
 	cur, err := collection.Find(ctx, bson.D{})

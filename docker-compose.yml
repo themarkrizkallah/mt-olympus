@@ -3,6 +3,8 @@ version: '3'
 services:
 
   front_end_server:
+    hostname: front_end_server
+    container_name: front_end_server
     build:
       context: ./front_end_server/
       dockerfile: Dockerfile

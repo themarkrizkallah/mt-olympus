@@ -22,9 +22,13 @@ var (
 	RedisPassword string
 
 	// MongoDB variables
-	MongoUri          string
+	MongoHostName     string
+	MongoPort         string
+	MongoUser         string
+	MongoPassword     string
 	MongoDb           string
 	MongoRetrySeconds uint64
+	MongoRetryTimes   uint64
 )
 
 func Init() {
@@ -44,7 +48,11 @@ func Init() {
 	RedisPassword = os.Getenv("REDIS_PASSWORD")
 
 	// MongoDB
-	MongoUri = os.Getenv("MONGO_URI")
+	MongoHostName = os.Getenv("MONGO_HOSTNAME")
+	MongoPort = os.Getenv("MONGO_PORT")
+	MongoUser = os.Getenv("MONGO_USER")
+	MongoPassword = os.Getenv("MONGO_PASSWORD")
 	MongoDb = os.Getenv("MONGO_DB")
 	MongoRetrySeconds, _ = strconv.ParseUint(os.Getenv("MONGO_RETRY_SECONDS"), 10, 64)
+	MongoRetryTimes, _ = strconv.ParseUint(os.Getenv("MONGO_RETRY_TIMES"), 10, 64)
 }

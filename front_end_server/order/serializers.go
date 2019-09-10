@@ -9,8 +9,6 @@ import (
 )
 
 type Payload struct {
-	UserId  string  `json:"user_id"`
-	OrderId string  `json:"order_id"`
 	Amount  uint64  `json:"amount"`
 	Price   uint64  `json:"price"`
 	Side    pb.Side `json:"side"`
@@ -38,8 +36,6 @@ func (o *Order) ToOrderRequest() pb.OrderRequest {
 // Parse parses a Payload into an Order
 func (p *Payload) Parse() Order {
 	return Order{
-		UserId:    p.UserId,
-		OrderId:   p.OrderId,
 		Amount:    p.Amount,
 		Price:     p.Price,
 		Side:      p.Side,

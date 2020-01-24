@@ -57,15 +57,13 @@ The response body should look something like:
 ```json
 {
   "response": {
-    "user_id": "7aef23ee-3e68-11ea-a0f1-0242ac180003",
-    "order_id": "d932f451-1bf8-45c8-b510-a2b73d05d599",
-    "amount": 10,
-    "price": 1000,
+    "order_id": "4b8a7396-33df-4fdc-b921-4bad3a264f0b",
+    "amount": 11,
+    "price": 1200,
+    "side": 0,
+    "type": 0,
     "message": "Confirmed",
-    "created_at": {
-      "seconds": 1579842931,
-      "nanos": 163333530
-    }
+    "created_at": "2020-01-24T06:34:32.232515945Z"
   }
 }
 ```

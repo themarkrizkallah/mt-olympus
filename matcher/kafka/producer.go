@@ -17,12 +17,12 @@ func SetupProducer(brokers []string) (*sarama.AsyncProducer, error) {
 	config := sarama.NewConfig()
 	config.Producer.RequiredAcks = sarama.WaitForLocal
 
-	for i := uint64(0); i < env.KafkaProdRetryTimes; i++ {
+	for i := uint(0); i < env.RetryTimes; i++ {
 		log.Println("async producer retry #", i+1)
 		producer, err = sarama.NewAsyncProducer(brokers, config)
 
 		if err != nil {
-			time.Sleep(time.Duration(env.KafkaProdRetrySeconds) * time.Second)
+			time.Sleep(time.Duration(env.RetrySeconds) * time.Second)
 			continue
 		}
 
@@ -30,4 +30,11 @@ func SetupProducer(brokers []string) (*sarama.AsyncProducer, error) {
 	}
 
 	return nil, err
+}
+
+func ProduceMessage(topic string, value []byte) {
+	producer.Input() <- &sarama.ProducerMessage{
+		Topic: topic,
+		Value: sarama.ByteEncoder(value),
+	}
 }

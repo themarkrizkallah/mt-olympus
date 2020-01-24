@@ -2,18 +2,24 @@ package server
 
 import (
 	"context"
-	"log"
-
+	"fmt"
 	"github.com/Shopify/sarama"
 	"github.com/golang/protobuf/proto"
-
 	"grpc_server/kafka"
 	pb "grpc_server/proto"
+	"log"
+	"sync"
 )
+
+var ChannelMap sync.Map
 
 type Server struct{}
 
+type OrderResponse struct{}
+
 func (s *Server) PlaceOrder(c context.Context, orderRequest *pb.OrderRequest) (*pb.PlaceOrderResponse, error) {
+	var response * pb.PlaceOrderResponse
+
 	log.Printf("Processing: %+v\n", orderRequest)
 
 	data, err := proto.Marshal(orderRequest)
@@ -23,14 +29,22 @@ func (s *Server) PlaceOrder(c context.Context, orderRequest *pb.OrderRequest) (*
 	}
 
 	msg := &sarama.ProducerMessage{
-		Topic: "orders",
+		Topic: "order.request",
 		Value: sarama.ByteEncoder(data),
 	}
 
-	_, _, err = kafka.Producer.SendMessage(msg)
+	channel := make(chan OrderResponse)
+	ChannelMap.Store(orderRequest.OrderId, channel)
+
+	_, _, err = kafka.SyncProducer.SendMessage(msg)
 	if err != nil {
-		return &pb.PlaceOrderResponse{Body: ""}, err
+		response = &pb.PlaceOrderResponse{Body: err.Error()}
+	} else {
+		ch, _ := ChannelMap.Load(orderRequest.OrderId)
+
+		response = &pb.PlaceOrderResponse{Body: fmt.Sprintf("+%v", <- ch.(chan OrderResponse))}
 	}
 
-	return &pb.PlaceOrderResponse{Body: "Order successfully placed."}, nil
+	ChannelMap.Delete(orderRequest.OrderId)
+	return response, err
 }

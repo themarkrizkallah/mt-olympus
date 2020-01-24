@@ -22,5 +22,15 @@ message OrderRequest {
     uint64 price = 4;
     Side Side = 5;
     Type type = 6;
-    google.protobuf.Timestamp created_at = 7;
+}
+
+message OrderConf {
+    string user_id = 1;
+    string order_id = 2;
+    uint64 amount = 3;
+    uint64 price = 4;
+    Side Side = 5;
+    Type type = 6;
+    string message = 7;
+    google.protobuf.Timestamp created_at = 8;
 }

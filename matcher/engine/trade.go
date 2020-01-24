@@ -1,13 +1,11 @@
 package engine
 
 import (
-	"log"
-	"time"
-
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-
+	"log"
 	pb "matcher/proto"
+	"time"
 )
 
 type Trade struct {

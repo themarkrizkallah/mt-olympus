@@ -1,12 +1,9 @@
 package engine
 
 import (
-	"time"
-
 	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
-
 	pb "matcher/proto"
+	"time"
 )
 
 type Order struct {
@@ -34,7 +31,8 @@ func (o *Order) ToProto(msg []byte) error {
 	o.Price = orderRequest.Price
 	o.Side = orderRequest.Side
 	o.Type = orderRequest.Type
-	o.CreatedAt, _ = ptypes.Timestamp(orderRequest.CreatedAt)
+	//o.CreatedAt, _ = ptypes.Timestamp(orderRequest.CreatedAt)
+	o.CreatedAt = time.Now()
 	o.ReceivedAt = time.Now()
 
 	return nil
@@ -48,7 +46,7 @@ func ProtoToOrder(msg []byte) (Order, error) {
 		return Order{}, err
 	}
 
-	ts, _ := ptypes.Timestamp(orderRequest.CreatedAt)
+	//ts, _ := ptypes.Timestamp(orderRequest.CreatedAt)
 	order := Order{
 		UserId:     orderRequest.UserId,
 		OrderId:    orderRequest.OrderId,
@@ -56,7 +54,7 @@ func ProtoToOrder(msg []byte) (Order, error) {
 		Price:      orderRequest.Price,
 		Side:       orderRequest.Side,
 		Type:       orderRequest.Type,
-		CreatedAt:  ts,
+		CreatedAt:  time.Now(),
 		ReceivedAt: time.Now(),
 	}
 

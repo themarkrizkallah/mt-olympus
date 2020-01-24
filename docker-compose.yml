@@ -1,35 +1,20 @@
 version: '3'
 
 services:
-
-  front_end_server:
-    hostname: front_end_server
-    container_name: front_end_server
+  apollo:
     build:
-      context: ./front_end_server/
+      context: ./apollo/
       dockerfile: Dockerfile
-    command: ./front_end_server
+    command: ./apollo
     ports:
       - "8080:8080"
     env_file:
-      - kafka.env
-      - front_end_server/.env
+      - env/kafka.env
+      - env/postgres.env
+      - env/redis.env
     depends_on:
-      - mongo
+      - db
       - redis
-
-  grpc_server:
-    build:
-      context:  ./grpc_server/
-      dockerfile: Dockerfile
-    command: ./grpc_server
-    expose:
-      - "4040"
-    env_file:
-      - kafka.env
-      - grpc_server/.env
-    depends_on:
-      - broker
 
   matcher:
     build:
@@ -37,28 +22,27 @@ services:
       dockerfile: Dockerfile
     command: ./matcher
     env_file:
-      - kafka.env
+      - env/kafka.env
       - matcher/.env
     depends_on:
       - broker
 
+  db:
+    image: postgres:9.6
+    restart: always
+    volumes:
+    - ./db/postgres_data:/var/lib/postgresql
+    - ./db-init/:/docker-entrypoint-initdb.d/
+    env_file:
+      - env/postgres.env
+    ports:
+      - "5432:5432"
+
   redis:
     image: redis
-    hostname: redis
-    container_name: redis
     command: redis-server --requirepass redis_pass
     ports:
       - "6379:6379"
-
-  mongo:
-    image: mongo
-    hostname: mongo
-    container_name: mongo
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: mongo_pass
 
   zookeeper:
     image: confluentinc/cp-zookeeper:5.3.0
@@ -87,33 +71,3 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-
-# Might use later
-
-#  schema-registry:
-#    image: confluentinc/cp-schema-registry:5.3.0
-#    hostname: schema-registry
-#    container_name: schema-registry
-#    depends_on:
-#      - zookeeper
-#      - broker
-#    ports:
-#      - "8081:8081"
-#    environment:
-#      SCHEMA_REGISTRY_HOST_NAME: schema-registry
-#      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
-#
-#  rest-proxy:
-#    image: confluentinc/cp-kafka-rest:5.3.0
-#    depends_on:
-#      - zookeeper
-#      - broker
-#      - schema-registry
-#    ports:
-#      - 8082:8082
-#    hostname: rest-proxy
-#    container_name: rest-proxy
-#    environment:
-#      KAFKA_REST_HOST_NAME: rest-proxy
-#      KAFKA_REST_BOOTSTRAP_SERVERS: 'broker:29092'
-#      KAFKA_REST_LISTENERS: "http://0.0.0.0:8082"

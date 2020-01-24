@@ -1,11 +1,9 @@
 package kafka
 
 import (
-	"fmt"
-	"log"
-
 	"github.com/Shopify/sarama"
-
+	"github.com/golang/protobuf/proto"
+	"log"
 	"matcher/engine"
 	"matcher/env"
 )
@@ -43,17 +41,22 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 		}
 
 		log.Printf("Processing: %+v\n", order)
-		trades := orderbook.Process(order) // Process the order
+		orderConf, trades := orderbook.Process(order) // Process the order
 
 		if len(trades) > 0 {
-			fmt.Printf("Completed Trade(s): %+v\n", trades)
+			log.Printf("Completed Trade(s): %+v\n", trades)
 		}
 
+		data, err := proto.Marshal(&orderConf)
+		if err != nil {
+			log.Panicln("Error marshalling data:", err)
+		}
+
+		log.Println("Confirming order on order.conf")
+		ProduceMessage("order.conf", data)
+
 		for _, trade := range trades {
-			producer.Input() <- &sarama.ProducerMessage{
-				Topic: "trades",
-				Value: sarama.ByteEncoder(trade.ToProto()),
-			}
+			ProduceMessage("trades", trade.ToProto())
 		}
 
 		// Mark the message as processed
@@ -63,7 +66,7 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 	return nil
 }
 
-func SetupConsumer(brokers []string) (Consumer, sarama.ConsumerGroup, error){
+func SetupConsumer(brokers []string) (Consumer, sarama.ConsumerGroup, error) {
 	log.Println("Starting a new Sarama consumer...")
 
 	version, err := sarama.ParseKafkaVersion(env.KafkaVersion)

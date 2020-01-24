@@ -3,15 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/Shopify/sarama"
 	"log"
+	"matcher/engine"
+	"matcher/env"
+	"matcher/kafka"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
-
-	"matcher/engine"
-	"matcher/env"
-	"matcher/kafka"
 )
 
 func main() {
@@ -20,23 +20,26 @@ func main() {
 	startMatcher()
 }
 
-func startMatcher(){
+func startMatcher() {
+	var (
+		producer *sarama.AsyncProducer
+		consumer kafka.Consumer
+		client sarama.ConsumerGroup
+		err error
+	)
+
 	brokers := []string{fmt.Sprintf("%v:%v", env.KafkaHost, env.KafkaPort)}
-	topics	:= []string{"orders"}
+	topics := []string{"order.request"}
 
-	producer, err := kafka.SetupProducer(brokers)
-	if err != nil {
-		log.Fatal("Unable to connect async producer to kafka server:", err)
+	if 	producer, err = kafka.SetupProducer(brokers); err != nil {
+		log.Fatalln("Unable to connect async producer to kafka server:", err)
 	}
-
 	log.Println("Async producer up and running!...")
 	defer (*producer).Close()
 
-	consumer, client, err := kafka.SetupConsumer(brokers)
-	if err != nil {
+	if consumer, client, err = kafka.SetupConsumer(brokers); err != nil {
 		log.Fatal("Unable to connect consumer group to kafka server:", err)
 	}
-
 	log.Println("Connected to consumer group!...")
 	defer client.Close()
 
@@ -60,7 +63,7 @@ func startMatcher(){
 	}()
 
 	<-consumer.Ready // Await till the consumer has been set up
-	log.Println("Sarama consumer up and running!...")
+	log.Println("Consumer up and running!...")
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)

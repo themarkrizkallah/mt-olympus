@@ -3,16 +3,29 @@ package engine
 import (
 	"time"
 
+	"github.com/golang/protobuf/ptypes"
+
 	pb "matcher/proto"
 )
 
 // Process an order and return the trades generated before adding the remaining amount to the market
-func (ob *OrderBook) Process(order Order) []Trade {
-	if order.Side == pb.Side_BUY {
-		return ob.processLimitBuy(order)
+func (ob *OrderBook) Process(order Order) (pb.OrderConf, []Trade) {
+	orderConf := pb.OrderConf{
+		UserId:               order.UserId,
+		OrderId:              order.OrderId,
+		Amount:               order.Amount,
+		Price:                order.Price,
+		Side:                 order.Side,
+		Type:                 order.Type,
+		Message:              "Confirmed",
+		CreatedAt:            ptypes.TimestampNow(),
 	}
 
-	return ob.processLimitSell(order)
+	if order.Side == pb.Side_BUY {
+		return orderConf, ob.processLimitBuy(order)
+	}
+
+	return orderConf, ob.processLimitSell(order)
 }
 
 // Process a limit buy order

@@ -17,8 +17,11 @@ var (
 	Base  string
 	Quote string
 
-	KafkaHost string
-	KafkaPort string
+	KafkaHost    string
+	KafkaPort    string
+	KafkaVersion string
+
+	KafkaConsGroup string
 
 	// Kafka Producer Vars
 	KafkaProdReturnSuccesses bool
@@ -42,6 +45,9 @@ func Init() {
 
 	KafkaHost = os.Getenv("KAFKA_HOST")
 	KafkaPort = os.Getenv("KAFKA_PORT")
+	KafkaVersion = os.Getenv("KAFKA_VERSION")
+
+	KafkaConsGroup = os.Getenv("KAFKA_CONS_GROUP")
 
 	// Kafka Producer Vars
 	_, KafkaProdReturnSuccesses = os.LookupEnv("KAFKA_PROD_RETURN_SUCCESSES")

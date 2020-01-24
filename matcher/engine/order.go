@@ -27,31 +27,13 @@ func ProtoToOrder(msg []byte) (Order, error) {
 	}
 
 	order := Order{
-		UserId:     orderRequest.UserId,
-		OrderId:    orderRequest.OrderId,
-		Amount:     orderRequest.Amount,
-		Price:      orderRequest.Price,
-		Side:       orderRequest.Side,
-		Type:       orderRequest.Type,
+		UserId:     orderRequest.GetUserId(),
+		OrderId:    orderRequest.GetOrderId(),
+		Amount:     orderRequest.GetAmount(),
+		Price:      orderRequest.GetPrice(),
+		Side:       orderRequest.GetSide(),
+		Type:       orderRequest.GetType(),
 	}
 
 	return order, nil
-}
-
-func (o *Order) ToProto(msg []byte) error {
-	orderRequest := &pb.OrderRequest{}
-
-	err := proto.Unmarshal(msg, orderRequest)
-	if err != nil {
-		return err
-	}
-
-	o.UserId = orderRequest.UserId
-	o.OrderId = orderRequest.OrderId
-	o.Amount = orderRequest.Amount
-	o.Price = orderRequest.Price
-	o.Side = orderRequest.Side
-	o.Type = orderRequest.Type
-
-	return nil
 }

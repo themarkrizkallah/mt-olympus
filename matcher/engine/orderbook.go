@@ -1,5 +1,10 @@
 package engine
 
+import (
+	pb "matcher/proto"
+	"time"
+)
+
 var orderbook OrderBook
 
 // BuyOrders: sorted in ascending order
@@ -9,6 +14,17 @@ type OrderBook struct {
 	Quote      string
 	BuyOrders  []Order
 	SellOrders []Order
+}
+
+// Process an order and return the trades generated before adding the remaining amount to the market
+func (ob *OrderBook) Process(order Order) (pb.OrderConf, []Trade) {
+	order.CreatedAt = time.Now()
+
+	if order.Side == pb.Side_BUY{
+		return ob.processLimitBuy(order)
+	}
+
+	return ob.processLimitSell(order)
 }
 
 func (ob *OrderBook) addBuyOrder(order Order) {

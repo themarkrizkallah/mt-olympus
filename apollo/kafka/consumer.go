@@ -43,8 +43,6 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 			receiveOp := ReceiveOp{
 				OrderConf: orderConf,
 			}
-
-			log.Println("receiveOp:", receiveOp)
 			Receiver <- receiveOp
 		}
 

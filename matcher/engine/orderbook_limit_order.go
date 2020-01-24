@@ -8,17 +8,6 @@ import (
 	pb "matcher/proto"
 )
 
-// Process an order and return the trades generated before adding the remaining amount to the market
-func (ob *OrderBook) Process(order Order) (pb.OrderConf, []Trade) {
-	order.CreatedAt = time.Now()
-
-	if order.Side == pb.Side_BUY {
-		return ob.processLimitBuy(order)
-	}
-
-	return ob.processLimitSell(order)
-}
-
 // Process a limit buy order
 func (ob *OrderBook) processLimitBuy(order Order) (pb.OrderConf, []Trade) {
 	trades := make([]Trade, 0, 1)

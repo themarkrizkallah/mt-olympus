@@ -23,23 +23,23 @@ var (
 	Sender   chan SendOp
 )
 
+const chanSize = 10
+
 func PipelineRequests(wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	log.Println("PipelineRequests thread running...")
-	Receiver = make(chan ReceiveOp)
-	Sender = make(chan SendOp)
+	log.Println("Request Pipeliner running...")
+	Receiver = make(chan ReceiveOp, chanSize)
+	Sender = make(chan SendOp, chanSize)
 
 	stateMap := make(map[string]chan pb.OrderConf)
 
 	for {
 		select {
 		case sendOp := <-Sender:
-			//log.Println("Received sendOp, producing message")
 			stateMap[sendOp.ID] = sendOp.Receiver
 			ProduceMessage(sendOp.Topic, sendOp.Value)
 		case receiveOp := <-Receiver:
-			//log.Println("Received receiveOp, passing message")
 			stateMap[receiveOp.OrderConf.UserId] <- receiveOp.OrderConf
 			delete(stateMap, receiveOp.OrderConf.UserId)
 		}

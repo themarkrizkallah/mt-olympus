@@ -63,6 +63,5 @@ func CreateOrder(c *gin.Context) {
 
 	//log.Println("sendOp:", sendOp)
 	kafka.Sender <- sendOp
-
-	c.JSON(http.StatusOK, gin.H{"response": <-sendOp.Receiver})
+	c.JSON(http.StatusOK, gin.H{"response": types.FromProto(<-sendOp.Receiver)})
 }

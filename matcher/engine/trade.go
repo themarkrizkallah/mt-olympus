@@ -1,11 +1,13 @@
 package engine
 
 import (
+	"log"
+	"time"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	"log"
+
 	pb "matcher/proto"
-	"time"
 )
 
 type Trade struct {
@@ -18,22 +20,6 @@ type Trade struct {
 	Base       string
 	Quote      string
 	ExecutedAt time.Time
-}
-
-func (t *Trade) ToTradeMessage() *pb.TradeMessage {
-	ts, _ := ptypes.TimestampProto(t.ExecutedAt)
-
-	return &pb.TradeMessage{
-		TakerId:    t.TakerId,
-		MakerId:    t.MakerId,
-		TakerOid:   t.TakerOid,
-		MakerOid:   t.MakerOid,
-		Amount:     t.Amount,
-		Price:      t.Price,
-		Base:       t.Base,
-		Quote:      t.Quote,
-		ExecutedAt: ts,
-	}
 }
 
 func (t *Trade) ToProto() []byte {

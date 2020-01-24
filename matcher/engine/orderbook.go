@@ -11,37 +11,6 @@ type OrderBook struct {
 	SellOrders []Order
 }
 
-type OneSidedError struct {}
-
-func (e OneSidedError) Error() string {
-	return "Orderbook is one sided"
-}
-
-/*
-func(ob *OrderBook) GetSpread() (uint64, error) {
-	var err error
-
-	numBuys := len(ob.BuyOrders)
-	numSells := len(ob.SellOrders)
-	spread := uint64(0)
-
-	if numBuys > 0 && numSells > 0{
-		spread = ob.BuyOrders[0].Price - ob.SellOrders[0].Price
-
-		//if spread < 0 {
-		//	spread *= -1
-		//}
-
-		err = nil
-	} else {
-		err = OneSidedError{}
-	}
-
-	return 0, err
-}
-
- */
-
 func (ob *OrderBook) addBuyOrder(order Order) {
 	n := len(ob.BuyOrders)
 	i := n

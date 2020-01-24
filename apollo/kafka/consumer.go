@@ -8,13 +8,11 @@ import (
 
 	"apollo/env"
 	pb "apollo/proto"
-	"apollo/types"
 )
 
 // Consumer represents a Sarama consumer group consumer
 type Consumer struct {
 	Ready chan bool
-	Brain chan types.Conf
 }
 
 // Setup is run at the beginning of a new session, before ConsumeClaim

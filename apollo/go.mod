@@ -13,6 +13,5 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/lib/pq v1.3.0
 	github.com/pkg/errors v0.8.1 // indirect
-	go.mongodb.org/mongo-driver v1.2.0
 	google.golang.org/grpc v1.26.0 // indirect
 )

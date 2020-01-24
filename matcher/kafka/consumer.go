@@ -1,9 +1,11 @@
 package kafka
 
 import (
+	"log"
+
 	"github.com/Shopify/sarama"
 	"github.com/golang/protobuf/proto"
-	"log"
+
 	"matcher/engine"
 	"matcher/env"
 )

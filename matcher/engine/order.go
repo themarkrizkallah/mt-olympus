@@ -1,9 +1,11 @@
 package engine
 
 import (
-	"github.com/golang/protobuf/proto"
-	pb "matcher/proto"
 	"time"
+
+	"github.com/golang/protobuf/proto"
+
+	pb "matcher/proto"
 )
 
 type Order struct {
@@ -14,7 +16,26 @@ type Order struct {
 	Side       pb.Side
 	Type       pb.Type
 	CreatedAt  time.Time
-	ReceivedAt time.Time
+}
+
+func ProtoToOrder(msg []byte) (Order, error) {
+	orderRequest := &pb.OrderRequest{}
+
+	err := proto.Unmarshal(msg, orderRequest)
+	if err != nil {
+		return Order{}, err
+	}
+
+	order := Order{
+		UserId:     orderRequest.UserId,
+		OrderId:    orderRequest.OrderId,
+		Amount:     orderRequest.Amount,
+		Price:      orderRequest.Price,
+		Side:       orderRequest.Side,
+		Type:       orderRequest.Type,
+	}
+
+	return order, nil
 }
 
 func (o *Order) ToProto(msg []byte) error {
@@ -31,32 +52,6 @@ func (o *Order) ToProto(msg []byte) error {
 	o.Price = orderRequest.Price
 	o.Side = orderRequest.Side
 	o.Type = orderRequest.Type
-	//o.CreatedAt, _ = ptypes.Timestamp(orderRequest.CreatedAt)
-	o.CreatedAt = time.Now()
-	o.ReceivedAt = time.Now()
 
 	return nil
-}
-
-func ProtoToOrder(msg []byte) (Order, error) {
-	orderRequest := &pb.OrderRequest{}
-
-	err := proto.Unmarshal(msg, orderRequest)
-	if err != nil {
-		return Order{}, err
-	}
-
-	//ts, _ := ptypes.Timestamp(orderRequest.CreatedAt)
-	order := Order{
-		UserId:     orderRequest.UserId,
-		OrderId:    orderRequest.OrderId,
-		Amount:     orderRequest.Amount,
-		Price:      orderRequest.Price,
-		Side:       orderRequest.Side,
-		Type:       orderRequest.Type,
-		CreatedAt:  time.Now(),
-		ReceivedAt: time.Now(),
-	}
-
-	return order, nil
 }

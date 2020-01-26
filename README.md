@@ -14,7 +14,7 @@ You need to have *protoc* installed. Instructions can be found [here](https://gi
 ### Installation
 Clone the repo and run the build script.
 ```
-$ git clone https://github.com/themarkrizkallah/exchange.git
+$ git clone https://github.com/themarkrizkallah/mt-olympus.git
 $ ./build.sh
 ```
 

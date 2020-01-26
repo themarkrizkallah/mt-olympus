@@ -1,4 +1,4 @@
-# exchange
+# mt-olympus
 This is my implementation of an exchange platform powered by a performant matching engine.
 
 ## Getting Started

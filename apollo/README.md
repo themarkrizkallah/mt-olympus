@@ -17,7 +17,7 @@ The response body should return a UUID on success that corresponds to the user i
 
 ```json
 {
-  "response": "7aef23ee-3e68-11ea-a0f1-0242ac180003" 
+  "user_id": "7aef23ee-3e68-11ea-a0f1-0242ac180003" 
 }
 ```
 
@@ -32,6 +32,31 @@ Endpoint to log an user in. The payload should have the following fields:
 ```
 A cookie (`exchange_userCookie`) should be attached to the response that can be used to authenticate in future requests.
 
+### `GET /accounts`
+Endpoint to retrieve a list of a user's accounts. 
+This endpoint requires a valid `exchange_userCookie` cookie to be passed in with the request.
+
+The response body should looking something like:
+```json
+[
+  {
+    "account_id": "ac6678d4-4000-11ea-a898-0242ac130003",
+    "user_id": "",
+    "asset_id": "1",
+    "balance": 0,
+    "holds": 0,
+    "created_at": "2020-01-26T05:57:02.47724Z"
+  },
+  {
+    "account_id": "ac669bd4-4000-11ea-a898-0242ac130003",
+    "user_id": "",
+    "asset_id": "2",
+    "balance": 0,
+    "holds": 0,
+    "created_at": "2020-01-26T05:57:02.47724Z"
+  }
+]
+```
 
 ### `POST /orders`
 Endpoint to place an order. This endpoint requires a valid `exchange_userCookie` cookie to be passed in with the request.

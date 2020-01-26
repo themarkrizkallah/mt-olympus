@@ -1,7 +1,6 @@
 package order
 
 import (
-	pb "apollo/proto"
 	"log"
 	"net/http"
 	"time"
@@ -11,13 +10,14 @@ import (
 	"github.com/google/uuid"
 
 	"apollo/kafka"
+	pb "apollo/proto"
 	"apollo/redis"
 	"apollo/types"
 )
 
 const cookieName = "exchange_userCookie"
 
-func CreateOrder(c *gin.Context) {
+func PostOrder(c *gin.Context) {
 	var payload types.Payload
 
 	sessionId, _ := c.Cookie(cookieName)
@@ -61,7 +61,6 @@ func CreateOrder(c *gin.Context) {
 		Receiver: make(chan pb.OrderConf),
 	}
 
-	//log.Println("sendOp:", sendOp)
 	kafka.Sender <- sendOp
 	c.JSON(http.StatusOK, gin.H{"response": types.FromProto(<-sendOp.Receiver)})
 }

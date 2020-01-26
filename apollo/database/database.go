@@ -1,18 +1,23 @@
 package database
 
 import (
-	"apollo/env"
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
 	"time"
 
 	_ "github.com/lib/pq"
+
+	"apollo/env"
 )
 
 const dbType = "postgres"
 
-var db *sql.DB
+var (
+	db       *sql.DB
+	AssetIds []string
+)
 
 func Init(sslMode string) (*sql.DB, error) {
 	var err error
@@ -51,4 +56,35 @@ func Init(sslMode string) (*sql.DB, error) {
 
 func GetDB() *sql.DB {
 	return db
+}
+
+func GetAssetIds() ([]string, error) {
+	const getAssetsSql = `select id from assets`
+
+	if len(AssetIds) > 0 {
+		return AssetIds, nil
+	}
+
+	ctx, _ := context.WithTimeout(context.Background(), 1*time.Second)
+
+	// Get asset ids
+	rows, err := db.QueryContext(ctx, getAssetsSql)
+	if err != nil {
+		log.Println("An error occurred getting assets:", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id string
+
+		if err := rows.Scan(&id); err != nil {
+			log.Println("An error occurred reading assets:", err)
+			return nil, err
+		}
+
+		AssetIds = append(AssetIds, id)
+	}
+
+	return AssetIds, nil
 }

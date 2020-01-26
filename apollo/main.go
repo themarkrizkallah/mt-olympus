@@ -1,8 +1,6 @@
 package main
 
 import (
-	"apollo/database"
-	"apollo/redis"
 	"context"
 	"fmt"
 	"log"
@@ -13,9 +11,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"apollo/accounts"
+	"apollo/database"
 	"apollo/env"
 	"apollo/kafka"
 	"apollo/order"
+	"apollo/redis"
 	"apollo/users"
 )
 
@@ -25,11 +26,18 @@ func main() {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
+	// Init kafka
 	go initKafka(&wg)
+
+	// Init DB
 	if _, err := database.Init("disable"); err != nil {
 		log.Fatalln("Error setting up db:", err)
 	}
+	if _, err := database.GetAssetIds(); err != nil {
+		log.Fatalln("Error retrieving Asset IDs:", err)
+	}
 
+	// Init Redis
 	if _, err := redis.Init(); err != nil {
 		log.Fatalln("Error initializing Redis client:", err)
 	}
@@ -107,11 +115,20 @@ func startServer(wg *sync.WaitGroup) {
 	r.POST("/signup/", users.SignUp)
 	r.POST("/login/", users.Login)
 
-	// Endpoints that require authentication
-	authorized := r.Group("/")
-	authorized.Use(users.AuthRequired())
+	// Order related endpoints
+	orderGroup := r.Group("/orders/")
+	orderGroup.Use(users.AuthRequired()) // Require active user session
 	{
-		authorized.POST("/orders/", order.CreateOrder)
+		orderGroup.POST("/", order.PostOrder)
+	}
+
+	// Account related endpoints
+	accountsGroup := r.Group("/accounts")
+	accountsGroup.Use(users.AuthRequired()) // Require active user session
+	{
+		accountsGroup.GET("/", accounts.GetUserAccounts)
+		accountsGroup.POST("/:account_id/deposit")  // Todo
+		accountsGroup.POST("/:account_id/withdraw") // Todo
 	}
 
 	if err := r.Run(); err != nil {

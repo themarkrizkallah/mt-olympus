@@ -15,7 +15,7 @@ create table if not exists api_keys(
 
 create table if not exists assets(
     id serial primary key,
-    name text unique not null,
+    name varchar(100) unique not null,
     tick varchar(12) unique not null
 );
 
@@ -24,5 +24,10 @@ create table if not exists accounts(
     user_id uuid references users(id),
     asset_id serial references assets(id),
     balance bigint not null default 0,
-    holds bigint not null default 0
+    holds bigint not null default 0,
+    created_at timestamp not null default now()
 );
+
+-- Initial asset setup
+insert into assets(name, tick) values('US Dollar', 'USD');
+insert into assets(name, tick) values('Bitcoin', 'BTC');

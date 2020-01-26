@@ -2,8 +2,6 @@ package users
 
 import "time"
 
-const table = "users"
-
 type User struct {
 	Id        string
 	Email     string

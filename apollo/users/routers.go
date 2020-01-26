@@ -15,8 +15,13 @@ import (
 
 func SignUp(c *gin.Context) {
 	var (
-		payload SignupPayload
-		userId  string
+		payload    SignupPayload
+		userId     string
+	)
+
+	const (
+		createUserSql    = `insert into users(email, password) values($1, $2) returning id`
+		createAccountSql = `insert into accounts(user_id, asset_id) values($1, $2) returning id`
 	)
 
 	err := c.BindJSON(&payload)
@@ -32,17 +37,57 @@ func SignUp(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Password required"})
 		return
 	}
-
 	payload.Password, _ = argon2id.CreateHash(payload.Password, argon2id.DefaultParams)
 
 	db := database.GetDB()
-	sqlStatement := `insert into users(email, password) values($1, $2) returning id`
 
-	err = db.QueryRowContext(c, sqlStatement, payload.Email, payload.Password).Scan(&userId)
+	// Begin user creation transaction
+	tx, err := db.Begin()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Println("Error beginning transaction:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred"})
+		return
+	}
+
+	// Create user account
+	stmt, err := tx.Prepare(createUserSql)
+	if err != nil {
+		log.Println("Error preparing transaction:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred"})
+		return
+	}
+	defer stmt.Close()
+
+	err = stmt.QueryRowContext(c, payload.Email, payload.Password).Scan(&userId)
+	if err != nil {
+		log.Println("Error executing user transaction:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred"})
+		return
+	}
+
+	// Create user accounts
+	stmt, err = tx.Prepare(createAccountSql)
+	if err != nil {
+		log.Println("Error preparing account transaction:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred"})
+		return
+	}
+	defer stmt.Close()
+
+	assetIds, _ := database.GetAssetIds()
+	for _, assetId := range assetIds {
+		if _, err = stmt.ExecContext(c, userId, assetId); err != nil {
+			log.Println("Error executing account transaction:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred"})
+			return
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		log.Println("Error committing transaction:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred"})
 	} else {
-		c.JSON(http.StatusOK, gin.H{"response": userId})
+		c.JSON(http.StatusOK, gin.H{"user_id": userId})
 	}
 }
 

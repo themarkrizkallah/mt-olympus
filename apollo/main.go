@@ -33,9 +33,6 @@ func main() {
 	if _, err := database.Init("disable"); err != nil {
 		log.Fatalln("Error setting up db:", err)
 	}
-	if _, err := database.GetAssetIds(); err != nil {
-		log.Fatalln("Error retrieving Asset IDs:", err)
-	}
 
 	// Init Redis
 	if _, err := redis.Init(); err != nil {

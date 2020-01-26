@@ -74,9 +74,14 @@ func SignUp(c *gin.Context) {
 	}
 	defer stmt.Close()
 
-	assetIds, _ := database.GetAssetIds()
-	for _, assetId := range assetIds {
-		if _, err = stmt.ExecContext(c, userId, assetId); err != nil {
+	assets, err := redis.GetAssetList(c)
+	if err != nil {
+		log.Println("Error retrieving asset list:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred"})
+		return
+	}
+	for _, asset := range assets {
+		if _, err = stmt.ExecContext(c, userId, asset.Id); err != nil {
 			log.Println("Error executing account transaction:", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred"})
 			return

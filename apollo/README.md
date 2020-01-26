@@ -40,18 +40,20 @@ The response body should looking something like:
 ```json
 [
   {
-    "account_id": "1b90a2da-4005-11ea-b443-0242ac140003",
-    "asset_id": "1",
+    "account_id": "99d2f35a-406e-11ea-b1c0-0242ac1a0003",
+    "asset_id": "e69fb1a6-406d-11ea-99c1-0242ac1a0003",
+    "tick": "USD",
     "balance": 0,
     "holds": 0,
-    "created_at": "2020-01-26T06:28:46.965899Z"
+    "created_at": "2020-01-26T19:03:55.938624Z"
   },
   {
-    "account_id": "1b910194-4005-11ea-b443-0242ac140003",
-    "asset_id": "2",
+    "account_id": "99d379ba-406e-11ea-b1c0-0242ac1a0003",
+    "asset_id": "e6a04bc0-406d-11ea-99c1-0242ac1a0003",
+    "tick": "BTC",
     "balance": 0,
     "holds": 0,
-    "created_at": "2020-01-26T06:28:46.965899Z"
+    "created_at": "2020-01-26T19:03:55.938624Z"
   }
 ]
 ```

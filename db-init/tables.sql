@@ -8,21 +8,22 @@ create table if not exists users(
 );
 
 create table if not exists api_keys(
-   id uuid primary key default uuid_generate_v1(),
+    id uuid primary key default uuid_generate_v1(),
    user_id uuid references users(id),
    created_at timestamp not null default now()
 );
 
 create table if not exists assets(
-    id serial primary key,
+    id uuid primary key default uuid_generate_v1(),
     name varchar(100) unique not null,
-    tick varchar(12) unique not null
+    tick varchar(12) unique not null,
+    created_at timestamp not null default now()
 );
 
 create table if not exists accounts(
     id uuid primary key default uuid_generate_v1(),
     user_id uuid references users(id),
-    asset_id serial references assets(id),
+    asset_id uuid references assets(id),
     balance bigint not null default 0,
     holds bigint not null default 0,
     created_at timestamp not null default now()

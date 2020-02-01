@@ -58,6 +58,42 @@ The response body should looking something like:
 ]
 ```
 
+### `POST/accounts/:account_id/deposit`
+Endpoint to deposit funds to user accounts.
+This endpoint requires an account id and a valid `exchange_userCookie` cookie to be passed in with the request.
+The payload should have the following field:
+```json
+{
+  "amount": 1000
+}
+```
+- `amount`: int64 amount to deposit
+
+The response body should look something like:
+```json
+{
+  "balance": 1000
+}
+```
+
+### `POST/accounts/:account_id/withdraw`
+Endpoint to withdraw funds from user accounts.
+This endpoint requires an account id and a valid `exchange_userCookie` cookie to be passed in with the request.
+The payload should have the following field:
+```json
+{
+  "amount": 1000
+}
+```
+- `amount`: int64 amount to withdraw, must be <= (account balance - holds on account)
+
+The response body should look something like:
+```json
+{
+  "balance": 0
+}
+```
+
 ### `POST /orders`
 Endpoint to place an order. This endpoint requires a valid `exchange_userCookie` cookie to be passed in with the request.
 The payload should have the following fields:

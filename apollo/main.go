@@ -124,8 +124,8 @@ func startServer(wg *sync.WaitGroup) {
 	accountsGroup.Use(users.AuthRequired()) // Require active user session
 	{
 		accountsGroup.GET("/", accounts.GetUserAccounts)
-		accountsGroup.POST("/:account_id/deposit")  // Todo
-		accountsGroup.POST("/:account_id/withdraw") // Todo
+		accountsGroup.POST("/:account_id/deposit", accounts.Deposit)
+		accountsGroup.POST("/:account_id/withdraw", accounts.Withdraw)
 	}
 
 	if err := r.Run(); err != nil {

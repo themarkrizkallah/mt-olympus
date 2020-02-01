@@ -8,10 +8,13 @@ import (
 
 	"github.com/alexedwards/argon2id"
 	"github.com/gin-gonic/gin"
+	"github.com/lib/pq"
 
 	"apollo/database"
 	"apollo/redis"
 )
+
+const uniqueViolationCode = "23505"
 
 func SignUp(c *gin.Context) {
 	var (
@@ -24,8 +27,7 @@ func SignUp(c *gin.Context) {
 		createAccountSql = `insert into accounts(user_id, asset_id) values($1, $2) returning id`
 	)
 
-	err := c.BindJSON(&payload)
-	if err != nil {
+	if err := c.BindJSON(&payload); err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		return
 	}
@@ -59,9 +61,14 @@ func SignUp(c *gin.Context) {
 	defer stmt.Close()
 
 	err = stmt.QueryRowContext(c, payload.Email, payload.Password).Scan(&userId)
-	if err != nil {
-		log.Println("Error executing user transaction:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred"})
+	if e, ok := err.(*pq.Error); ok {
+		if e.Code == uniqueViolationCode {
+			c.JSON(http.StatusForbidden, gin.H{"error": "A user with that email already exists."})
+		} else {
+			log.Println("Error executing user transaction:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred"})
+		}
+
 		return
 	}
 
@@ -92,7 +99,7 @@ func SignUp(c *gin.Context) {
 		log.Println("Error committing transaction:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred"})
 	} else {
-		c.JSON(http.StatusOK, gin.H{"user_id": userId})
+		c.JSON(http.StatusCreated, gin.H{"user_id": userId})
 	}
 }
 
@@ -101,6 +108,8 @@ func Login(c *gin.Context) {
 		payload LoginPayload
 		user    User
 	)
+
+	const getUserSql = `select id, email, password, created_at from users where email = $1`
 
 	if err := c.BindJSON(&payload); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -116,9 +125,7 @@ func Login(c *gin.Context) {
 	}
 
 	db := database.GetDB()
-	sqlStatement := `select id, email, password, created_at from users where email = $1`
-
-	err := db.QueryRowContext(c, sqlStatement, payload.Email).Scan(
+	err := db.QueryRowContext(c, getUserSql, payload.Email).Scan(
 		&user.Id,
 		&user.Email,
 		&user.Password,
@@ -127,10 +134,11 @@ func Login(c *gin.Context) {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusForbidden, gin.H{"error": "User not found"})
-			return
 		} else {
 			log.Println("Error:", err)
+			c.JSON(http.StatusForbidden, gin.H{"error": "An error occurred"})
 		}
+		return
 	}
 
 	if match, err := argon2id.ComparePasswordAndHash(payload.Password, user.Password); err != nil {

@@ -11,3 +11,11 @@ type Account struct {
 	Holds     int64     `json:"holds"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+type DepositPayload struct {
+	Amount int64 `json:"amount"`
+}
+
+type WithdrawPayload struct {
+	Amount int64 `json:"amount"`
+}

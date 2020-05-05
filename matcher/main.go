@@ -3,20 +3,29 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/Shopify/sarama"
 	"log"
-	"matcher/engine"
-	"matcher/env"
-	"matcher/kafka"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/Shopify/sarama"
+
+	"matcher/database"
+	"matcher/engine"
+	"matcher/env"
+	"matcher/kafka"
 )
 
 func main() {
 	env.Init()
-	engine.InitializeOrderBook(env.OrderBookCap)
+
+	// Init DB
+	if _, err := database.Init("disable"); err != nil {
+		log.Fatalln("Error setting up db:", err)
+	}
+
+	engine.InitializeOrderBook(env.OrderBookCap, env.Base, env.Quote)
 	startMatcher()
 }
 

@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 echo "protoc --proto_path=proto --go_out=proto/ proto/order.proto proto/trade.proto"
 protoc --proto_path=proto --go_out=proto/ proto/order.proto proto/trade.proto

@@ -18,8 +18,8 @@ const uniqueViolationCode = "23505"
 
 func SignUp(c *gin.Context) {
 	var (
-		payload    SignupPayload
-		userId     string
+		payload SignupPayload
+		userId  string
 	)
 
 	const (
@@ -44,7 +44,13 @@ func SignUp(c *gin.Context) {
 	db := database.GetDB()
 
 	// Begin user creation transaction
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(
+		c,
+		&sql.TxOptions{
+			Isolation: sql.LevelSerializable,
+			ReadOnly:  false,
+		},
+	)
 	if err != nil {
 		log.Println("Error beginning transaction:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred"})

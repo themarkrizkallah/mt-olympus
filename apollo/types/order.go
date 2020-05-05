@@ -9,22 +9,21 @@ import (
 )
 
 type Order struct {
-	UserId    string    `json:"user_id"`
-	OrderId   string    `json:"order_id"`
-	Amount    uint64    `json:"amount"`
-	Price     uint64    `json:"price"`
-	Side      pb.Side   `json:"side"`
-	Type      pb.Type   `json:"type"`
-	CreatedAt time.Time `json:"created_at"`
+	UserId  string  `json:"user_id"`
+	OrderId string  `json:"order_id"`
+	Amount  int64   `json:"amount"`
+	Price   int64   `json:"price"`
+	Side    pb.Side `json:"side"`
+	Type    pb.Type `json:"type"`
 }
 
 type OrderConf struct {
 	OrderId   string    `json:"order_id"`
-	Amount    uint64    `json:"amount"`
-	Price     uint64    `json:"price"`
+	Amount    int64     `json:"amount"`
+	Price     int64     `json:"price"`
 	Side      pb.Side   `json:"side"`
 	Type      pb.Type   `json:"type"`
-	Message   string    `json:"message"`
+	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -37,7 +36,7 @@ func FromProto(oc pb.OrderConf) OrderConf {
 		Price:     oc.Price,
 		Side:      oc.Side,
 		Type:      oc.Type,
-		Message:   oc.Message,
+		Status:    oc.Status,
 		CreatedAt: ts,
 	}
 }

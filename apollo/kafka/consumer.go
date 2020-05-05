@@ -67,6 +67,8 @@ func SetupConsumer(brokers []string) (Consumer, sarama.ConsumerGroup, error) {
 	 */
 	config := sarama.NewConfig()
 	config.Version = version
+	//config.Net.SASL.User = env.KafkaUser
+	//config.Net.SASL.Password = env.KafkaPassword
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 
 	//Setup a new Sarama consumer group

@@ -15,6 +15,8 @@ func CreateAsyncProducer(brokers []string) (*sarama.AsyncProducer, error) {
 	var err error
 
 	config := sarama.NewConfig()
+	//config.Net.SASL.User = env.KafkaUser
+	//config.Net.SASL.Password = env.KafkaPassword
 	config.Producer.Return.Successes = false
 	config.Producer.Return.Errors = true
 	config.Producer.RequiredAcks = sarama.WaitForLocal

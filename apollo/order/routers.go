@@ -3,7 +3,6 @@ package order
 import (
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/protobuf/proto"
@@ -12,39 +11,51 @@ import (
 	"apollo/kafka"
 	pb "apollo/proto"
 	"apollo/redis"
-	"apollo/types"
 )
 
-const cookieName = "exchange_userCookie"
+const (
+	userIdKey         = "user_id"
+	orderRequestTopic = "order.request"
+)
 
 func PostOrder(c *gin.Context) {
-	var payload types.Payload
+	var orderRequest pb.OrderRequest
 
-	sessionId, _ := c.Cookie(cookieName)
-	redisClient := redis.GetClient()
+	userId := c.GetString(userIdKey)
 
-	userId, err := redisClient.Get(sessionId).Result()
-	if err == redis.Nil {
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Authorization expired or not logged in"})
-	}
-
-	if err = c.BindJSON(&payload); err != nil {
+	if err := c.BindJSON(&orderRequest); err != nil {
 		log.Println("Error parsing payload:", err)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Could not parse payload"})
 		return
 	}
 
-	order := types.Order{
-		UserId:    userId,
-		OrderId:   uuid.New().String(),
-		Amount:    payload.Amount,
-		Price:     payload.Price,
-		Side:      payload.Side,
-		Type:      payload.Type,
-		CreatedAt: time.Now(),
+	// Validate the order request
+	if orderRequest.GetAmount() <= 0 {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "amount must be > 0"})
+		return
+	} else if orderRequest.GetPrice() <= 0 {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "price must be > 0"})
+		return
+	} else if _, ok := pb.Side_value[orderRequest.GetSide().String()]; !ok {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "side must be 0 or 1"})
+		return
+	} else if _, ok := pb.Type_value[orderRequest.GetType().String()]; !ok {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "type must be 0, 1, or 2"})
+		return
 	}
 
-	orderRequest := order.ToOrderRequest()
+	productsMap, err := redis.GetProductsMap(c)
+	if err != nil {
+		log.Println("Error retrieving products", err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "An error occurred"})
+		return
+	} else if _, ok := productsMap[orderRequest.GetProductId()]; !ok {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Invalid product_id"})
+		return
+	}
+
+	orderRequest.UserId = userId
+	orderRequest.OrderId = uuid.New().String()
 	log.Printf("Processing: %+v\n", orderRequest)
 
 	data, err := proto.Marshal(&orderRequest)
@@ -55,12 +66,17 @@ func PostOrder(c *gin.Context) {
 	}
 
 	sendOp := kafka.SendOp{
-		ID:       orderRequest.UserId,
-		Topic:    "order.request",
+		ID:       orderRequest.OrderId,
+		Topic:    orderRequestTopic,
 		Value:    data,
 		Receiver: make(chan pb.OrderConf),
 	}
 
 	kafka.Sender <- sendOp
-	c.JSON(http.StatusOK, gin.H{"response": types.FromProto(<-sendOp.Receiver)})
+
+	// Get OrderConf and only keep relevant fields
+	orderConf := <-sendOp.Receiver
+	orderConf.UserId = ""
+
+	c.JSON(http.StatusOK, orderConf)
 }

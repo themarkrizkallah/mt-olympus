@@ -8,7 +8,7 @@ create table if not exists users(
 );
 
 create table if not exists api_keys(
-    id uuid primary key default uuid_generate_v1(),
+   id uuid primary key default uuid_generate_v1(),
    user_id uuid references users(id),
    created_at timestamp not null default now()
 );
@@ -18,6 +18,15 @@ create table if not exists assets(
     name varchar(100) unique not null,
     tick varchar(12) unique not null,
     created_at timestamp not null default now()
+);
+
+create table if not exists products(
+   id varchar(25) primary key,
+   base_id uuid references assets(id) not null,
+   quote_id uuid references assets(id) not null,
+   base_tick varchar(12) references assets(tick) not null,
+   quote_tick varchar(12) references assets(tick) not null,
+   created_at timestamp not null default now()
 );
 
 create table if not exists accounts(
@@ -32,3 +41,15 @@ create table if not exists accounts(
 -- Initial asset setup
 insert into assets(name, tick) values('US Dollar', 'USD');
 insert into assets(name, tick) values('Bitcoin', 'BTC');
+
+-- Initial product setup
+with usd as (select id, tick from assets where tick = 'USD' limit 1),
+     btc as (select id, tick from assets where tick = 'BTC' limit 1)
+insert into products(id, base_id, quote_id, base_tick, quote_tick)
+values (
+    concat((select tick from btc), '-', (select tick from usd)),
+    (select id from btc),
+    (select id from usd),
+    (select tick from btc),
+    (select tick from usd)
+);

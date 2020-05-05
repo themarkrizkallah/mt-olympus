@@ -40,7 +40,7 @@ func PipelineRequests(wg *sync.WaitGroup) {
 			stateMap[sendOp.ID] = sendOp.Receiver
 			ProduceMessage(sendOp.Topic, sendOp.Value)
 		case receiveOp := <-Receiver:
-			stateMap[receiveOp.OrderConf.UserId] <- receiveOp.OrderConf
+			stateMap[receiveOp.OrderConf.OrderId] <- receiveOp.OrderConf
 			delete(stateMap, receiveOp.OrderConf.UserId)
 		}
 	}

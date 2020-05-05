@@ -16,6 +16,7 @@ import (
 	"apollo/env"
 	"apollo/kafka"
 	"apollo/order"
+	"apollo/product"
 	"apollo/redis"
 	"apollo/users"
 )
@@ -109,8 +110,12 @@ func startServer(wg *sync.WaitGroup) {
 
 	r := gin.Default()
 
+	// User related endpoints
 	r.POST("/signup/", users.SignUp)
 	r.POST("/login/", users.Login)
+
+	// Product related endpoints
+	r.GET("/products/", product.GetProducts)
 
 	// Order related endpoints
 	orderGroup := r.Group("/orders/")

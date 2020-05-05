@@ -1,10 +1,12 @@
 package users
 
 import (
+	"errors"
 	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/cache/v7"
 
 	"apollo/redis"
 )
@@ -21,13 +23,18 @@ func AuthRequired() func(c *gin.Context) {
 			return
 		}
 
-		if err := redis.Codec.GetContext(c, sessionId, &userId); err == redis.Nil {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Authorization missing or expired"})
-		} else if err != nil {
-			log.Println("Error getting value from redis", err)
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "An error occurred"})
-		} else {
-			c.Set("user_id", userId)
+		err = redis.Codec.GetContext(c, sessionId, &userId)
+		if err != nil {
+			if errors.Is(err, cache.ErrCacheMiss) {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Authorization missing or expired"})
+			} else {
+				log.Println("Error getting value from redis:", err)
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "An error occurred"})
+			}
+
+			return
 		}
+
+		c.Set("user_id", userId)
 	}
 }

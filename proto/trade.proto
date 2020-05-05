@@ -3,15 +3,18 @@ syntax = "proto3";
 package proto;
 
 import "google/protobuf/timestamp.proto";
+import "order.proto";
 
 message TradeMessage {
-    string taker_id = 1;
-    string maker_id = 2;
-    string taker_oid = 3;
-    string maker_oid = 4;
-    uint64 amount = 5;
-    uint64 price = 6;
-    string base = 7;
-    string quote = 8;
-    google.protobuf.Timestamp executed_at = 9;
+    string buyer_id = 1;
+    string seller_id = 2;
+    string taker_id = 3;
+    string maker_id = 4;
+    string taker_oid = 5;
+    string maker_oid = 6;
+    int64 amount = 7;
+    int64 price = 8;
+    Side side = 9;
+    string product_id = 10;
+    google.protobuf.Timestamp executed_at = 11;
 }

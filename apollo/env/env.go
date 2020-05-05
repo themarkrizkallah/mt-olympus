@@ -21,6 +21,8 @@ var (
 	KafkaHost                string
 	KafkaPort                string
 	KafkaVersion             string
+	KafkaUser                string
+	KafkaPassword            string
 	KafkaConsGroup           string
 	KafkaProdReturnSuccesses bool
 	KafkaProdReturnErrors    bool
@@ -45,6 +47,8 @@ func Init() {
 	KafkaHost = os.Getenv("KAFKA_HOST")
 	KafkaPort = os.Getenv("KAFKA_PORT")
 	KafkaVersion = os.Getenv("KAFKA_VERSION")
+	KafkaUser = os.Getenv("KAFKA_BROKER_USER")
+	KafkaPassword = os.Getenv("KAFKA_BROKER_PASSWORD")
 	KafkaConsGroup = os.Getenv("KAFKA_CONS_GROUP")
 	_, KafkaProdReturnSuccesses = os.LookupEnv("KAFKA_PROD_RETURN_SUCCESSES")
 	_, KafkaProdReturnErrors = os.LookupEnv("KAFKA_PROD_RETURN_ERRORS")

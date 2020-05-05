@@ -8,6 +8,7 @@ import (
 
 	"matcher/engine"
 	"matcher/env"
+	"matcher/types"
 )
 
 // Consumer represents a Sarama consumer group consumer
@@ -36,7 +37,7 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 	orderbook := engine.GetOrderBook()
 
 	for message := range claim.Messages() {
-		order, err := engine.ProtoToOrder(message.Value)
+		order, err := types.ProtoToOrder(message.Value)
 		if err != nil {
 			log.Printf("Error decoding message: %v\n", message)
 			continue
@@ -58,7 +59,11 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 		ProduceMessage("order.conf", data)
 
 		for _, trade := range trades {
-			ProduceMessage("trades", trade.ToProto())
+			data, err := proto.Marshal(&trade)
+			if err != nil {
+				log.Fatalln("Error marshalling trade:", err)
+			}
+			ProduceMessage("trades", data)
 		}
 
 		// Mark the message as processed
@@ -82,6 +87,8 @@ func SetupConsumer(brokers []string) (Consumer, sarama.ConsumerGroup, error) {
 	 */
 	config := sarama.NewConfig()
 	config.Version = version
+	//config.Net.SASL.User = env.KafkaUser
+	//config.Net.SASL.Password = env.KafkaPassword
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 
 	//Setup a new Sarama consumer group

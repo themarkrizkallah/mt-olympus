@@ -38,13 +38,12 @@ func PutHold(tx *sql.Tx, userId, assetId string, amount int64) error {
 	return err
 }
 
-// MUST EDIT THIS
-func TransferValue(tx *sql.Tx, trade types.Trade, baseId, quoteId string) error {
+func TransferValue(tx *sql.Tx, trade *types.Trade, baseId, quoteId string) error {
 	var err error = nil
 
 	buyOrder := trade.Buy
 	sellOrder := trade.Sell
-	tradeMsg := trade.TradeMsg
+	tradeMsg := &trade.TradeMsg
 
 	price := tradeMsg.GetPrice()
 	amount := tradeMsg.GetAmount()

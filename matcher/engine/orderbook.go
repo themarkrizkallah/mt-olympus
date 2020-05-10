@@ -28,11 +28,12 @@ type OrderBook struct {
 // Process an order and return the trades generated before adding the remaining amount to the market
 func (ob *OrderBook) Process(order types.Order) (pb.OrderConf, []pb.TradeMessage) {
 	var (
-		account   types.Account
-		orderConf pb.OrderConf
-		trades    []types.Trade
-		tx        *sql.Tx
-		err       error
+		account      types.Account
+		orderConf    pb.OrderConf
+		orderUpdates []types.OrderUpdate
+		trades       []types.Trade
+		tx           *sql.Tx
+		err          error
 	)
 	order.CreatedAt = time.Now()
 
@@ -53,7 +54,7 @@ func (ob *OrderBook) Process(order types.Order) (pb.OrderConf, []pb.TradeMessage
 		}
 
 		// Reject order if user's available balance isn't enough to fund the buy order
-		if account.AvailableBalance() < order.Amount * order.Price {
+		if account.AvailableBalance() < order.Amount*order.Price {
 			ts, _ := ptypes.TimestampProto(order.CreatedAt)
 			orderConf = pb.OrderConf{
 				UserId:    order.UserId,
@@ -62,17 +63,17 @@ func (ob *OrderBook) Process(order types.Order) (pb.OrderConf, []pb.TradeMessage
 				Price:     order.Price,
 				Side:      order.Side,
 				Type:      order.Type,
-				Status:   "Rejected",
+				Status:    "Rejected",
 				CreatedAt: ts,
 			}
 
 			return orderConf, []pb.TradeMessage{}
 		}
 
-		if err := database.PutHold(tx, order.UserId, ob.QuoteId, order.Amount * order.Price); err != nil {
+		if err := database.PutHold(tx, order.UserId, ob.QuoteId, order.Amount*order.Price); err != nil {
 			log.Fatalln("Error putting hold on account for buy order:", err)
 		}
-		orderConf, trades = ob.processLimitBuy(order)
+		orderConf, trades, orderUpdates = ob.processLimitBuy(order)
 	} else {
 		if account, err = database.GetAccount(tx, order.UserId, ob.BaseId); err != nil {
 			log.Fatalln("Error reading user account:", err)
@@ -88,7 +89,7 @@ func (ob *OrderBook) Process(order types.Order) (pb.OrderConf, []pb.TradeMessage
 				Price:     order.Price,
 				Side:      order.Side,
 				Type:      order.Type,
-				Status:   "Rejected",
+				Status:    "Rejected",
 				CreatedAt: ts,
 			}
 			return orderConf, []pb.TradeMessage{}
@@ -97,12 +98,26 @@ func (ob *OrderBook) Process(order types.Order) (pb.OrderConf, []pb.TradeMessage
 		if err := database.PutHold(tx, order.UserId, ob.BaseId, order.Amount); err != nil {
 			log.Fatalln("Error putting hold on account for sell order:", err)
 		}
-		orderConf, trades = ob.processLimitSell(order)
+		orderConf, trades, orderUpdates = ob.processLimitSell(order)
+	}
+
+	// Insert the order in the database
+	if err = database.InsertOrder(tx, order, orderConf.GetStatus(), orderbook.ProductId); err != nil {
+		log.Fatalln("Error inserting order", err)
+	}
+
+	// Update the relevant orders
+	for _, orderUpdate := range orderUpdates {
+		if err = database.UpdateOrderStatus(tx, orderUpdate); err != nil {
+			log.Fatalln("Error updating order value", err)
+		}
 	}
 
 	// Reflect the value transfer in the DB and remove holds (if appropriate)
 	for _, trade := range trades {
-		err = database.TransferValue(tx, trade, ob.BaseId, ob.QuoteId)
+		if err = database.TransferValue(tx, &trade, ob.BaseId, ob.QuoteId); err != nil {
+			log.Fatalln("Error transferring value", err)
+		}
 	}
 
 	if err := tx.Commit(); err != nil {

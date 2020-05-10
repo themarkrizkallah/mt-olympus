@@ -14,17 +14,18 @@ import (
 	"apollo/redis"
 )
 
-const uniqueViolationCode = "23505"
+const (
+	cookieName          = "exchange_userCookie"
+	uniqueViolationCode = "23505"
+	createUserSql       = `insert into users(email, password) values($1, $2) returning id`
+	createAccountSql    = `insert into accounts(user_id, asset_id) values($1, $2) returning id`
+	getUserSql          = `select id, email, password, created_at from users where email = $1`
+)
 
 func SignUp(c *gin.Context) {
 	var (
 		payload SignupPayload
 		userId  string
-	)
-
-	const (
-		createUserSql    = `insert into users(email, password) values($1, $2) returning id`
-		createAccountSql = `insert into accounts(user_id, asset_id) values($1, $2) returning id`
 	)
 
 	if err := c.BindJSON(&payload); err != nil {
@@ -115,8 +116,6 @@ func Login(c *gin.Context) {
 		user    User
 	)
 
-	const getUserSql = `select id, email, password, created_at from users where email = $1`
-
 	if err := c.BindJSON(&payload); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -169,7 +168,7 @@ func Login(c *gin.Context) {
 	cookieMaxAge := int(time.Hour * 24 * 30)
 	const (
 		cookiePath     = "/"
-		cookieDomain   = "localhost"
+		cookieDomain   = ""
 		cookieSecure   = false
 		cookieHttpOnly = false
 	)

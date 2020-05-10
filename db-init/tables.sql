@@ -1,3 +1,5 @@
+-- noinspection SqlNoDataSourceInspectionForFile
+
 create extension if not exists "uuid-ossp";
 
 create table if not exists users(
@@ -36,6 +38,18 @@ create table if not exists accounts(
     balance bigint not null default 0,
     holds bigint not null default 0,
     created_at timestamp not null default now()
+);
+
+create table if not exists orders(
+     id uuid unique not null,
+     product_id varchar(25) references products(id) not null,
+     user_id uuid references users(id) not null,
+     amount bigint not null,
+     price bigint not null default 0,          -- 0 if it's a market order
+     type varchar(6) not null default 'limit', -- one of {LIMIT, MARKET, STOP}
+     side boolean not null,                    -- Buy = True, Sell = False
+     status varchar(16) not null,              -- one of {Filled, Partially Filled, Confirmed}
+     created_at timestamp not null
 );
 
 -- Initial asset setup

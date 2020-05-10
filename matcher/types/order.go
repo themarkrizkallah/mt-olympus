@@ -18,6 +18,11 @@ type Order struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type OrderUpdate struct {
+	OrderId string
+	Status  string
+}
+
 func ProtoToOrder(msg []byte) (Order, error) {
 	orderRequest := &pb.OrderRequest{}
 

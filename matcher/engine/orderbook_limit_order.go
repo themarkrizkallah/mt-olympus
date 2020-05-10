@@ -2,14 +2,20 @@ package engine
 
 import (
 	"github.com/golang/protobuf/ptypes"
-
 	pb "matcher/proto"
 	"matcher/types"
 )
 
+const (
+	filled = "Filled"
+	partiallyFilled = "Partially Filled"
+)
+
 // Process a limit buy order
-func (ob *OrderBook) processLimitBuy(order types.Order) (pb.OrderConf, []types.Trade) {
+func (ob *OrderBook) processLimitBuy(order types.Order) (pb.OrderConf, []types.Trade, []types.OrderUpdate) {
 	trades := make([]types.Trade, 0, 1)
+	orderUpdates := make([]types.OrderUpdate, 0, 1)
+
 	numSells := len(ob.SellOrders)
 	ts, _ := ptypes.TimestampProto(order.CreatedAt)
 
@@ -20,7 +26,7 @@ func (ob *OrderBook) processLimitBuy(order types.Order) (pb.OrderConf, []types.T
 		Price:     order.Price,
 		Side:      order.Side,
 		Type:      order.Type,
-		Status:   "Confirmed",
+		Status:    "Confirmed",
 		CreatedAt: ts,
 	}
 
@@ -49,8 +55,12 @@ func (ob *OrderBook) processLimitBuy(order types.Order) (pb.OrderConf, []types.T
 					ProductId:  ob.ProductId,
 					ExecutedAt: ptypes.TimestampNow(),
 				},
-				Buy:      order,
-				Sell:     sellOrder,
+				Buy:  order,
+				Sell: sellOrder,
+			}
+			orderUpdate := types.OrderUpdate{
+				OrderId: sellOrder.OrderId,
+				Status:  filled,
 			}
 
 			// Fill the entire order
@@ -60,18 +70,24 @@ func (ob *OrderBook) processLimitBuy(order types.Order) (pb.OrderConf, []types.T
 				if sellOrder.Amount == 0 {
 					ob.removeSellOrder(i)
 				} else {
+					orderUpdate.Status = partiallyFilled
 					ob.SellOrders[i] = sellOrder
 				}
-				orderConf.Status = "Filled"
+
+				orderConf.Status = filled
 				trades = append(trades, trade)
+				orderUpdates = append(orderUpdates, orderUpdate)
 				break
-			} else { // Fill a partial order and continue
-				trade.TradeMsg.Amount = sellOrder.Amount
-				order.Amount -= sellOrder.Amount
-				ob.removeSellOrder(i)
-				orderConf.Status = "Partially filled"
-				trades = append(trades, trade)
 			}
+
+			// Fill a partial order and continue
+			trade.TradeMsg.Amount = sellOrder.Amount
+			order.Amount -= sellOrder.Amount
+			ob.removeSellOrder(i)
+			orderConf.Status = partiallyFilled
+
+			trades = append(trades, trade)
+			orderUpdates = append(orderUpdates, orderUpdate)
 		}
 	}
 
@@ -79,15 +95,17 @@ func (ob *OrderBook) processLimitBuy(order types.Order) (pb.OrderConf, []types.T
 	if order.Amount > 0 {
 		ob.addBuyOrder(order)
 	}
-
-	return orderConf, trades
+	return orderConf, trades, orderUpdates
 }
 
 // Process a limit sell order
-func (ob *OrderBook) processLimitSell(order types.Order) (pb.OrderConf, []types.Trade) {
+func (ob *OrderBook) processLimitSell(order types.Order) (pb.OrderConf, []types.Trade, []types.OrderUpdate) {
 	trades := make([]types.Trade, 0, 1)
+	orderUpdates := make([]types.OrderUpdate, 0, 1)
+
 	numBuys := len(ob.BuyOrders)
 	ts, _ := ptypes.TimestampProto(order.CreatedAt)
+
 	orderConf := pb.OrderConf{
 		UserId:    order.UserId,
 		OrderId:   order.OrderId,
@@ -95,7 +113,7 @@ func (ob *OrderBook) processLimitSell(order types.Order) (pb.OrderConf, []types.
 		Price:     order.Price,
 		Side:      order.Side,
 		Type:      order.Type,
-		Status:   "Confirmed",
+		Status:    "Confirmed",
 		CreatedAt: ts,
 	}
 
@@ -124,8 +142,12 @@ func (ob *OrderBook) processLimitSell(order types.Order) (pb.OrderConf, []types.
 					ProductId:  ob.ProductId,
 					ExecutedAt: ptypes.TimestampNow(),
 				},
-				Buy:      buyOrder,
-				Sell:     order,
+				Buy:  buyOrder,
+				Sell: order,
+			}
+			orderUpdate := types.OrderUpdate{
+				OrderId: buyOrder.OrderId,
+				Status:  filled,
 			}
 
 			// Fill the entire order
@@ -134,20 +156,23 @@ func (ob *OrderBook) processLimitSell(order types.Order) (pb.OrderConf, []types.
 				if buyOrder.Amount == 0 {
 					ob.removeBuyOrder(i)
 				} else {
+					orderUpdate.Status = partiallyFilled
 					ob.BuyOrders[i] = buyOrder
 				}
 
-				orderConf.Status = "Filled"
+				orderConf.Status = filled
 				trades = append(trades, trade)
+				orderUpdates = append(orderUpdates, orderUpdate)
 				break
 
-			} else {  // Fill a partial order and continue
-				trade.TradeMsg.Amount = buyOrder.Amount
-				order.Amount -= buyOrder.Amount
-				ob.removeBuyOrder(i)
-				orderConf.Status = "Partially filled"
-				trades = append(trades, trade)
 			}
+			// Fill a partial order and continue
+			trade.TradeMsg.Amount = buyOrder.Amount
+			order.Amount -= buyOrder.Amount
+			ob.removeBuyOrder(i)
+			orderConf.Status = partiallyFilled
+			trades = append(trades, trade)
+			orderUpdates = append(orderUpdates, orderUpdate)
 		}
 	}
 
@@ -155,6 +180,5 @@ func (ob *OrderBook) processLimitSell(order types.Order) (pb.OrderConf, []types.
 	if order.Amount > 0 {
 		ob.addSellOrder(order)
 	}
-
-	return orderConf, trades
+	return orderConf, trades, orderUpdates
 }

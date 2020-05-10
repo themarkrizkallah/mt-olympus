@@ -14,12 +14,14 @@ import (
 	"apollo/accounts"
 	"apollo/database"
 	"apollo/env"
+	"apollo/hermes"
 	"apollo/kafka"
 	"apollo/order"
 	"apollo/product"
 	"apollo/redis"
 	"apollo/users"
 )
+
 
 func main() {
 	env.Init()
@@ -109,6 +111,10 @@ func startServer(wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	r := gin.Default()
+	hub := hermes.NewHub()
+
+	// Recovery middleware recovers from any panics and writes a 500 if there was one.
+	r.Use(gin.Recovery())
 
 	// User related endpoints
 	r.POST("/signup/", users.SignUp)
@@ -119,19 +125,24 @@ func startServer(wg *sync.WaitGroup) {
 
 	// Order related endpoints
 	orderGroup := r.Group("/orders/")
-	orderGroup.Use(users.AuthRequired()) // Require active user session
+	orderGroup.Use(AuthRequired()) // Require active user session
 	{
 		orderGroup.POST("/", order.PostOrder)
 	}
 
 	// Account related endpoints
 	accountsGroup := r.Group("/accounts")
-	accountsGroup.Use(users.AuthRequired()) // Require active user session
+	accountsGroup.Use(AuthRequired()) // Require active user session
 	{
 		accountsGroup.GET("/", accounts.GetUserAccounts)
 		accountsGroup.POST("/:account_id/deposit", accounts.Deposit)
 		accountsGroup.POST("/:account_id/withdraw", accounts.Withdraw)
 	}
+
+	// WebSocket endpoint
+	r.GET("/ws", AuthRequired(), func(c *gin.Context) {
+		hermes.WsHandler(c, hub)
+	})
 
 	if err := r.Run(); err != nil {
 		panic(err)

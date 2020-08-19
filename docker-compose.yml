@@ -17,6 +17,19 @@ services:
       - redis
       - broker
 
+  hermes:
+    build:
+      context: ./hermes/
+      dockerfile: Dockerfile
+    command: ./hermes
+    ports:
+      - "8000:8000"
+    env_file:
+      - env/postgres.env
+      - env/hermes.env
+    depends_on:
+      - db
+
   matcher:
     build:
       context: ./matcher/

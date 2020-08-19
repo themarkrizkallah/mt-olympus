@@ -14,7 +14,6 @@ import (
 	"apollo/accounts"
 	"apollo/database"
 	"apollo/env"
-	"apollo/hermes"
 	"apollo/kafka"
 	"apollo/order"
 	"apollo/product"
@@ -111,7 +110,6 @@ func startServer(wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	r := gin.Default()
-	hub := hermes.NewHub()
 
 	// Recovery middleware recovers from any panics and writes a 500 if there was one.
 	r.Use(gin.Recovery())
@@ -138,11 +136,6 @@ func startServer(wg *sync.WaitGroup) {
 		accountsGroup.POST("/:account_id/deposit", accounts.Deposit)
 		accountsGroup.POST("/:account_id/withdraw", accounts.Withdraw)
 	}
-
-	// WebSocket endpoint
-	r.GET("/ws", AuthRequired(), func(c *gin.Context) {
-		hermes.WsHandler(c, hub)
-	})
 
 	if err := r.Run(); err != nil {
 		panic(err)

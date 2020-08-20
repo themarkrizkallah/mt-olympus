@@ -5,14 +5,36 @@ import (
 )
 
 /*
-User supported messages are:
+Accepted message types are:
 	- "subscribe"
 	- "unsubscribe"
-
-Alongside the respective channel(s) of course, see channels.go
 */
 var acceptedMsgTypes = []string{"subscribe", "unsubscribe"}
 
+type SubscribeRequest struct {
+	Client *Client
+	SubMsg SubscribeMessage
+}
+
+type SubscribeMessage struct {
+	MsgType     string           `json:"type"`
+	ChannelMsgs []ChannelMessage `json:"channels"`
+}
+
+type SubscribeMessageJSON SubscribeMessage
+
+func (sm *SubscribeMessage) UnmarshalJSON(data []byte) error {
+	if err := json.Unmarshal(data, (*SubscribeMessageJSON)(sm)); err != nil {
+		return err
+	}
+
+	// Validate proper message type
+	if !stringFound(sm.MsgType, acceptedMsgTypes) {
+		return MessageTypeError{sm.MsgType}
+	}
+
+	return nil
+}
 
 type ChannelMessage struct {
 	Name       string   `json:"name"`
@@ -36,32 +58,6 @@ func (cm *ChannelMessage) UnmarshalJSON(data []byte) error {
 		if !stringFound(id, acceptedProductIDs){
 			return ProductIDError{id}
 		}
-	}
-
-	return nil
-}
-
-
-type SubscribeRequest struct {
-	Client *Client
-	SubMsg SubscribeMessage
-}
-
-type SubscribeMessage struct {
-	MsgType     string           `json:"type"`
-	ChannelMsgs []ChannelMessage `json:"channels"`
-}
-
-type SubscribeMessageJSON SubscribeMessage
-
-func (sm *SubscribeMessage) UnmarshalJSON(data []byte) error {
-	if err := json.Unmarshal(data, (*SubscribeMessageJSON)(sm)); err != nil {
-		return err
-	}
-
-	// Validate proper message type
-	if !stringFound(sm.MsgType, acceptedMsgTypes) {
-		return MessageTypeError{sm.MsgType}
 	}
 
 	return nil

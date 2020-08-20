@@ -1,10 +1,12 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
 
+var GenericError error = errors.New("bad request")
 
 type MessageTypeError struct {
 	givenType string
@@ -37,4 +39,16 @@ func (pie ProductIDError) Error() string {
 		"Accepted product_ids are [%s], user passed in: %s",
 		strings.Join(acceptedProductIDs[:], ","),
 		pie.givenID)
+}
+
+// Return true if e is an error defined in this file, false otherwise
+func definedErrorType(e error) bool{
+	if _, ok := e.(*MessageTypeError); ok {
+		return true
+	} else if _, ok = e.(*ChannelNameError); ok {
+		return true
+	} else if _, ok = e.(*ProductIDError); ok {
+		return true
+	}
+	return false
 }

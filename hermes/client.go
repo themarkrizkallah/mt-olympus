@@ -84,10 +84,14 @@ func (c *Client) readPump() {
 				}
 				break
 			}
+
+			if !definedErrorType(err) {
+				err = GenericError
+			}
 			c.reportError(err)
 		}
 
-		log.Printf("Client - Read message: %+v\n", subMsg)
+		log.Println("Client - Read message")
 		subRequest := SubscribeRequest{Client: c, SubMsg: subMsg}
 		c.hub.subscribe <- subRequest
 	}

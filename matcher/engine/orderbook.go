@@ -13,7 +13,7 @@ import (
 	"matcher/types"
 )
 
-var orderbook OrderBook
+const capacity = 100
 
 // BuyOrders: sorted in ascending order
 // SellOrders: sorted in descending order
@@ -102,11 +102,11 @@ func (ob *OrderBook) Process(order types.Order) (pb.OrderConf, []pb.TradeMessage
 	}
 
 	// Insert the order in the database
-	if err = database.InsertOrder(tx, order, orderConf.GetStatus(), orderbook.ProductId); err != nil {
+	if err = database.InsertOrder(tx, order, orderConf.GetStatus(), ob.ProductId); err != nil {
 		log.Fatalln("Error inserting order", err)
 	}
 
-	// Update the relevant orders
+	// Update the relevant orderChan
 	for _, orderUpdate := range orderUpdates {
 		if err = database.UpdateOrderStatus(tx, orderUpdate); err != nil {
 			log.Fatalln("Error updating order value", err)
@@ -173,13 +173,13 @@ func (ob *OrderBook) removeSellOrder(i int) {
 	ob.SellOrders = append(ob.SellOrders[:i], ob.SellOrders[i+1:]...)
 }
 
-func InitializeOrderBook(capacity uint64, base, quote string) {
+func newOrderBook(base, quote string) *OrderBook {
 	product, err := database.GetProduct(base, quote)
 	if err != nil {
 		log.Fatalln("Error retrieving product info:", err)
 	}
 
-	orderbook = OrderBook{
+	return &OrderBook{
 		Base:       base,
 		Quote:      quote,
 		BaseId:     product.BaseId,
@@ -188,8 +188,4 @@ func InitializeOrderBook(capacity uint64, base, quote string) {
 		BuyOrders:  make([]types.Order, 0, capacity),
 		SellOrders: make([]types.Order, 0, capacity),
 	}
-}
-
-func GetOrderBook() *OrderBook {
-	return &orderbook
 }

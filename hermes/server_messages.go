@@ -5,7 +5,6 @@ Server supported message types are:
 	- "confirmation"
 	- "error"
 */
-
 const (
 	confMessageType  = "confirmation"
 	errorMessageType = "error"

@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/avast/retry-go"
 	_ "github.com/lib/pq"
 
 	"matcher/env"
@@ -36,18 +37,24 @@ func Init(sslMode string) (*sql.DB, error) {
 
 	db.SetConnMaxLifetime(0)
 
-	for i := uint(0); i < env.RetryTimes; i++ {
-		log.Println("database retry #", i+1)
-
-		if err := db.Ping(); err != nil {
-			time.Sleep(time.Duration(env.RetrySeconds) * time.Second)
-			continue
-		}
-
-		return db, nil
+	err = retry.Do(
+		func() error {
+			if err := db.Ping(); err != nil {
+				return err
+			}
+			return nil
+		},
+		retry.Attempts(env.RetryTimes),
+		retry.Delay(time.Second),
+		retry.OnRetry(func(n uint, err error) {
+			log.Printf("Database - retry %v, error: %s", n, err)
+		}),
+	)
+	if err != nil {
+		log.Println("Error creating consumer group client:\n", err)
 	}
 
-	return db, nil
+	return db, err
 }
 
 func GetDB() *sql.DB {

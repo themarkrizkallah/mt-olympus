@@ -1,8 +1,7 @@
-package kafka
+package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -13,8 +12,8 @@ import (
 	"github.com/avast/retry-go"
 	"github.com/golang/protobuf/proto"
 
-	"apollo/env"
-	pb "apollo/proto"
+	"hermes/env"
+	pb "hermes/proto"
 )
 
 // Sarama configuration options
@@ -22,50 +21,52 @@ const (
 	assignor = "roundrobin"
 	oldest   = true
 	verbose  = false
-
-	consumptionTopics = "order.conf,trades"
 )
 
-// Consumer represents a Sarama consumer group consumer
-type Consumer struct {
-	ready  chan bool
-	topics []string
+var topicPrefixes = []string{
+	"order.request",
+	"order.conf",
+	"trades",
 }
 
 // Parse topic and return the topic prefix and product-id
 func parseTopic(topic string) (string, string) {
 	elements := strings.Split(topic, ".")
+
 	topicPrefix := strings.Join(elements[:len(elements)-1], ".")
 	prodId := elements[len(elements)-1]
 
 	return topicPrefix, prodId
 }
 
-func getConsumptionTopics(prodIds []string) string {
-	topics := strings.Split(consumptionTopics, ",")
+// Consumer represents a Sarama consumer group consumer
+type Consumer struct {
+	ready chan bool
 
-	for i, topic := range topics {
-		for _, prodId := range prodIds {
-			topics[i] = fmt.Sprintf("%s.%s", topic, prodId)
-		}
-	}
+	// OrderRequest channel
+	orderRequestChan chan<- pb.OrderRequest
 
-	return strings.Join(topics, ",")
+	// OrderConf channel
+	orderConfChan chan<- pb.OrderConf
+
+	// TradeMessage channel
+	tradeMsgChan chan<- pb.TradeMessage
 }
 
 func (consumer *Consumer) run(
-	ctx context.Context,
+	topics []string,
 	client sarama.ConsumerGroup,
 	wg *sync.WaitGroup,
-) {
+	ctx context.Context,
+	) {
 	defer wg.Done()
 
 	for {
 		// `Consume` should be called inside an infinite loop, when a
 		// server-side rebalance happens, the consumer session will need to be
 		// recreated to get the new claims
-		if err := client.Consume(ctx, consumer.topics, consumer); err != nil {
-			log.Panicf("Error from consumer: %s", err)
+		if err := client.Consume(ctx, topics, consumer); err != nil {
+			log.Panicf("Error from consumer: %v", err)
 		}
 		// check if context was cancelled, signaling that the consumer should stop
 		if ctx.Err() != nil {
@@ -98,12 +99,23 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 		topicPrefix, _ := parseTopic(message.Topic)
 
 		switch topicPrefix {
+		case "order.request":
+			var request pb.OrderRequest
+			if err := proto.Unmarshal(message.Value, &request); err != nil {
+				log.Panicf("Consumer - error unmarshalling message: %s", err)
+			}
+
 		case "order.conf":
 			var conf pb.OrderConf
 			if err := proto.Unmarshal(message.Value, &conf); err != nil {
 				log.Panicf("Consumer - error unmarshalling message: %s", err)
 			}
-			receiveOrderConf(conf)
+
+		case "trades":
+			var tradeMsg pb.TradeMessage
+			if err := proto.Unmarshal(message.Value, &tradeMsg); err != nil {
+				log.Panicf("Consumer - error unmarshalling message: %s", err)
+			}
 
 		default:
 			log.Printf("Consumer - new topic %s encountered", topicPrefix)
@@ -116,23 +128,23 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 	return nil
 }
 
-func newConsumerGroup(brokers, topics string) (Consumer, sarama.ConsumerGroup) {
+func newConsumerGroup(brokers string) (Consumer, sarama.ConsumerGroup) {
 	var (
 		consumer Consumer
-		client   sarama.ConsumerGroup
-		err      error
+		client sarama.ConsumerGroup
+		err error
 	)
+
+	if verbose {
+		sarama.Logger = log.New(os.Stdout, "[sarama] ", log.LstdFlags)
+	}
 
 	version, err := sarama.ParseKafkaVersion(env.KafkaVersion)
 	if err != nil {
 		log.Panicf("Error parsing Kafka version: %v", err)
 	}
 
-	if verbose {
-		sarama.Logger = log.New(os.Stdout, "[sarama] ", log.LstdFlags)
-	}
-
-	/*
+	/**
 	 * Construct a new Sarama configuration.
 	 * The Kafka cluster version has to be defined before the consumer/producer is initialized.
 	 */
@@ -154,10 +166,11 @@ func newConsumerGroup(brokers, topics string) (Consumer, sarama.ConsumerGroup) {
 		config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	}
 
-	//Setup a new Sarama consumer group
+	/**
+	 * Setup a new Sarama consumer group
+	 */
 	consumer = Consumer{
-		ready:  make(chan bool),
-		topics: strings.Split(topics, ","),
+		ready: make(chan bool),
 	}
 
 	err = retry.Do(
@@ -175,8 +188,9 @@ func newConsumerGroup(brokers, topics string) (Consumer, sarama.ConsumerGroup) {
 		}),
 	)
 	if err != nil {
-		log.Panicf("Enginer - error creating consumer group: %s\n", err)
+		log.Printf("Error creating consumer group client: %v\n", err)
 	}
 
 	return consumer, client
 }
+

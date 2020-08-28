@@ -3,8 +3,6 @@ package types
 import (
 	"time"
 
-	"github.com/golang/protobuf/proto"
-
 	pb "matcher/proto"
 )
 
@@ -23,15 +21,8 @@ type OrderUpdate struct {
 	Status  string
 }
 
-func ProtoToOrder(msg []byte) (Order, error) {
-	orderRequest := &pb.OrderRequest{}
-
-	err := proto.Unmarshal(msg, orderRequest)
-	if err != nil {
-		return Order{}, err
-	}
-
-	order := Order{
+func OrderFromOrderRequest(orderRequest *pb.OrderRequest) Order {
+	return Order{
 		UserId:  orderRequest.GetUserId(),
 		OrderId: orderRequest.GetOrderId(),
 		Amount:  orderRequest.GetAmount(),
@@ -39,6 +30,4 @@ func ProtoToOrder(msg []byte) (Order, error) {
 		Side:    orderRequest.GetSide(),
 		Type:    orderRequest.GetType(),
 	}
-
-	return order, nil
 }

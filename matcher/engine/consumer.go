@@ -1,4 +1,4 @@
-package kafka
+package engine
 
 import (
 	"context"
@@ -13,8 +13,9 @@ import (
 	"github.com/avast/retry-go"
 	"github.com/golang/protobuf/proto"
 
-	"apollo/env"
-	pb "apollo/proto"
+	"matcher/env"
+	pb "matcher/proto"
+	"matcher/types"
 )
 
 // Sarama configuration options
@@ -23,13 +24,14 @@ const (
 	oldest   = true
 	verbose  = false
 
-	consumptionTopics = "order.conf,trades"
+	consumptionTopics = "order.request"
 )
 
 // Consumer represents a Sarama consumer group consumer
 type Consumer struct {
-	ready  chan bool
-	topics []string
+	ready     chan bool
+	topics    []string
+	orderChan chan types.Order
 }
 
 // Parse topic and return the topic prefix and product-id
@@ -41,17 +43,6 @@ func parseTopic(topic string) (string, string) {
 	return topicPrefix, prodId
 }
 
-func getConsumptionTopics(prodIds []string) string {
-	topics := strings.Split(consumptionTopics, ",")
-
-	for i, topic := range topics {
-		for _, prodId := range prodIds {
-			topics[i] = fmt.Sprintf("%s.%s", topic, prodId)
-		}
-	}
-
-	return strings.Join(topics, ",")
-}
 
 func (consumer *Consumer) run(
 	ctx context.Context,
@@ -93,18 +84,18 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 	// Do not move the code below to a goroutine.
 	// The `ConsumeClaim` itself is called within a goroutine, see:
 	// https://github.com/Shopify/sarama/blob/master/consumer_group.go#L27-L29
+	//orderbook := getOrderBook()
 
 	for message := range claim.Messages() {
 		topicPrefix, _ := parseTopic(message.Topic)
 
 		switch topicPrefix {
-		case "order.conf":
-			var conf pb.OrderConf
-			if err := proto.Unmarshal(message.Value, &conf); err != nil {
+		case "order.request":
+			var request pb.OrderRequest
+			if err := proto.Unmarshal(message.Value, &request); err != nil {
 				log.Panicf("Consumer - error unmarshalling message: %s", err)
 			}
-			receiveOrderConf(conf)
-
+			consumer.orderChan <- types.OrderFromOrderRequest(&request)
 		default:
 			log.Printf("Consumer - new topic %s encountered", topicPrefix)
 		}
@@ -123,13 +114,13 @@ func newConsumerGroup(brokers, topics string) (Consumer, sarama.ConsumerGroup) {
 		err      error
 	)
 
+	if verbose {
+		sarama.Logger = log.New(os.Stdout, "[sarama] ", log.LstdFlags)
+	}
+
 	version, err := sarama.ParseKafkaVersion(env.KafkaVersion)
 	if err != nil {
 		log.Panicf("Error parsing Kafka version: %v", err)
-	}
-
-	if verbose {
-		sarama.Logger = log.New(os.Stdout, "[sarama] ", log.LstdFlags)
 	}
 
 	/*
@@ -156,7 +147,7 @@ func newConsumerGroup(brokers, topics string) (Consumer, sarama.ConsumerGroup) {
 
 	//Setup a new Sarama consumer group
 	consumer = Consumer{
-		ready:  make(chan bool),
+		ready: make(chan bool),
 		topics: strings.Split(topics, ","),
 	}
 
@@ -179,4 +170,14 @@ func newConsumerGroup(brokers, topics string) (Consumer, sarama.ConsumerGroup) {
 	}
 
 	return consumer, client
+}
+
+func getConsumptionTopic(prodId string) string {
+	topics := strings.Split(consumptionTopics, ",")
+
+	for i, topic := range topics {
+		topics[i] = fmt.Sprintf("%s.%s", topic, prodId)
+	}
+
+	return strings.Join(topics, ",")
 }

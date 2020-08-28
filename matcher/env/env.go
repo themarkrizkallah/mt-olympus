@@ -1,9 +1,8 @@
 package env
 
 import (
-	"log"
+	"fmt"
 	"os"
-	"strconv"
 )
 
 var (
@@ -35,17 +34,10 @@ var (
 )
 
 func Init() {
-	var err error
-
 	_, Debug = os.LookupEnv("DEBUG")
 	RetryTimes = 100
 	RetrySeconds = 1
 
-	OrderBookCap, err = strconv.ParseUint(os.Getenv("ORDERBOOK_CAP"), 10, 64)
-	if err != nil {
-		log.Println("Error reading ORDERBOOK_CAP, defaulting to 100")
-		OrderBookCap = 100
-	}
 	Base = os.Getenv("BASE")
 	Quote = os.Getenv("QUOTE")
 
@@ -66,4 +58,8 @@ func Init() {
 	_, KafkaConsReturnNotifs = os.LookupEnv("KAFKA_CONS_RETURN_NOTIFS")
 	_, KafkaProdReturnSuccesses = os.LookupEnv("KAFKA_PROD_RETURN_SUCCESSES")
 	_, KafkaProdReturnErrors = os.LookupEnv("KAFKA_PROD_RETURN_ERRORS")
+}
+
+func GetKafkaBroker() string {
+	return fmt.Sprintf("%s:%s", KafkaHost, KafkaPort)
 }

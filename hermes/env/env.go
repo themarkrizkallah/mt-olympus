@@ -1,6 +1,9 @@
 package env
 
-import "os"
+import (
+	"fmt"
+	"os"
+)
 
 var (
 	RetryTimes   uint
@@ -24,7 +27,7 @@ var (
 )
 
 func Init() {
-	RetryTimes = 100
+	RetryTimes = 10
 	RetrySeconds = 1
 
 	// Postgres
@@ -42,4 +45,8 @@ func Init() {
 	KafkaConsGroup = os.Getenv("KAFKA_CONS_GROUP")
 	_, KafkaProdReturnSuccesses = os.LookupEnv("KAFKA_PROD_RETURN_SUCCESSES")
 	_, KafkaProdReturnErrors = os.LookupEnv("KAFKA_PROD_RETURN_ERRORS")
+}
+
+func GetKafkaBroker() string {
+	return fmt.Sprintf("%s:%s", KafkaHost, KafkaPort)
 }

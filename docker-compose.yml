@@ -12,6 +12,8 @@ services:
       - env/kafka.env
       - env/postgres.env
       - env/redis.env
+    environment:
+      - KAFKA_CONS_GROUP=apollo
     depends_on:
       - db
       - redis
@@ -26,9 +28,13 @@ services:
       - "8000:8000"
     env_file:
       - env/postgres.env
+      - env/kafka.env
       - env/hermes.env
+    environment:
+      - KAFKA_CONS_GROUP=hermes
     depends_on:
       - db
+      - broker
 
   matcher:
     build:
@@ -39,6 +45,8 @@ services:
       - env/kafka.env
       - env/postgres.env
       - matcher/.env
+    environment:
+      - KAFKA_CONS_GROUP=matcher
     depends_on:
       - broker
       - db

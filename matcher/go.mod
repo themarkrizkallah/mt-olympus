@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/Shopify/sarama v1.26.3
+	github.com/avast/retry-go v2.6.0+incompatible
 	github.com/frankban/quicktest v1.10.0 // indirect
 	github.com/golang/protobuf v1.4.1
 	github.com/klauspost/compress v1.10.5 // indirect

@@ -1,4 +1,4 @@
-package kafka
+package engine
 
 import (
 	"log"
@@ -8,7 +8,13 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/avast/retry-go"
 
-	"apollo/env"
+	"matcher/env"
+)
+
+// Topics
+const (
+	confTopic   = "order.conf"
+	tradesTopic = "trades"
 )
 
 type Producer struct {
@@ -24,8 +30,8 @@ func (p *Producer) sendMessage(topic string, value []byte) {
 
 func newAsyncProducer(brokers string) sarama.AsyncProducer {
 	var (
-		producer sarama.AsyncProducer
 		err      error
+		producer sarama.AsyncProducer
 	)
 
 	config := sarama.NewConfig()
@@ -49,7 +55,7 @@ func newAsyncProducer(brokers string) sarama.AsyncProducer {
 		}),
 	)
 	if err != nil {
-		log.Panicf("Producer - error creating producer: %s\n", err)
+		log.Panicf("Engine - error creating producer: %s\n", err)
 	}
 
 	return producer

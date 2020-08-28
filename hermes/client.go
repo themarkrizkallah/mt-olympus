@@ -41,7 +41,7 @@ type Client struct {
 }
 
 type ClientSet map[*Client]bool
-type ClientChannels map[*Client]map[string]bool
+type ClientChannelMap map[*Client]map[string]bool
 
 func (c *Client) message(msg interface{})  {
 	c.send <- msg

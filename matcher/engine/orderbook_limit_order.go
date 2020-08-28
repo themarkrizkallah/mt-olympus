@@ -2,6 +2,7 @@ package engine
 
 import (
 	"github.com/golang/protobuf/ptypes"
+
 	pb "matcher/proto"
 	"matcher/types"
 )
@@ -19,7 +20,7 @@ func (ob *OrderBook) processLimitBuy(order types.Order) (pb.OrderConf, []types.T
 	numSells := len(ob.SellOrders)
 	ts, _ := ptypes.TimestampProto(order.CreatedAt)
 
-	orderConf := pb.OrderConf{
+	conf := pb.OrderConf{
 		UserId:    order.UserId,
 		OrderId:   order.OrderId,
 		Amount:    order.Amount,
@@ -32,7 +33,7 @@ func (ob *OrderBook) processLimitBuy(order types.Order) (pb.OrderConf, []types.T
 
 	// Check if we have at least one matching order
 	if numSells > 0 && ob.SellOrders[numSells-1].Price <= order.Price {
-		// Traverse all orders that match
+		// Traverse all orderChan that match
 		for i := numSells - 1; i >= 0; i-- {
 			sellOrder := ob.SellOrders[i]
 
@@ -74,7 +75,7 @@ func (ob *OrderBook) processLimitBuy(order types.Order) (pb.OrderConf, []types.T
 					ob.SellOrders[i] = sellOrder
 				}
 
-				orderConf.Status = filled
+				conf.Status = filled
 				trades = append(trades, trade)
 				orderUpdates = append(orderUpdates, orderUpdate)
 				break
@@ -84,7 +85,7 @@ func (ob *OrderBook) processLimitBuy(order types.Order) (pb.OrderConf, []types.T
 			trade.TradeMsg.Amount = sellOrder.Amount
 			order.Amount -= sellOrder.Amount
 			ob.removeSellOrder(i)
-			orderConf.Status = partiallyFilled
+			conf.Status = partiallyFilled
 
 			trades = append(trades, trade)
 			orderUpdates = append(orderUpdates, orderUpdate)
@@ -95,7 +96,7 @@ func (ob *OrderBook) processLimitBuy(order types.Order) (pb.OrderConf, []types.T
 	if order.Amount > 0 {
 		ob.addBuyOrder(order)
 	}
-	return orderConf, trades, orderUpdates
+	return conf, trades, orderUpdates
 }
 
 // Process a limit sell order
@@ -106,7 +107,7 @@ func (ob *OrderBook) processLimitSell(order types.Order) (pb.OrderConf, []types.
 	numBuys := len(ob.BuyOrders)
 	ts, _ := ptypes.TimestampProto(order.CreatedAt)
 
-	orderConf := pb.OrderConf{
+	conf := pb.OrderConf{
 		UserId:    order.UserId,
 		OrderId:   order.OrderId,
 		Amount:    order.Amount,
@@ -119,7 +120,7 @@ func (ob *OrderBook) processLimitSell(order types.Order) (pb.OrderConf, []types.
 
 	// Check if we have at least one matching order
 	if numBuys > 0 && ob.BuyOrders[numBuys-1].Price >= order.Price {
-		// Traverse all orders that match
+		// Traverse all orderChan that match
 		for i := numBuys - 1; i >= 0; i-- {
 			buyOrder := ob.BuyOrders[i]
 
@@ -160,7 +161,7 @@ func (ob *OrderBook) processLimitSell(order types.Order) (pb.OrderConf, []types.
 					ob.BuyOrders[i] = buyOrder
 				}
 
-				orderConf.Status = filled
+				conf.Status = filled
 				trades = append(trades, trade)
 				orderUpdates = append(orderUpdates, orderUpdate)
 				break
@@ -170,7 +171,7 @@ func (ob *OrderBook) processLimitSell(order types.Order) (pb.OrderConf, []types.
 			trade.TradeMsg.Amount = buyOrder.Amount
 			order.Amount -= buyOrder.Amount
 			ob.removeBuyOrder(i)
-			orderConf.Status = partiallyFilled
+			conf.Status = partiallyFilled
 			trades = append(trades, trade)
 			orderUpdates = append(orderUpdates, orderUpdate)
 		}
@@ -180,5 +181,5 @@ func (ob *OrderBook) processLimitSell(order types.Order) (pb.OrderConf, []types.
 	if order.Amount > 0 {
 		ob.addSellOrder(order)
 	}
-	return orderConf, trades, orderUpdates
+	return conf, trades, orderUpdates
 }

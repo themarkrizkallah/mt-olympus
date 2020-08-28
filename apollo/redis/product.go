@@ -52,3 +52,17 @@ func GetProductsMap(ctx context.Context) (map[string]types.Product, error){
 
 	return productsMap, err
 }
+
+func GetProductIDs(ctx context.Context) ([]string, error) {
+	products, err := GetProductsList(ctx)
+	if err != nil {
+		return []string{}, err
+	}
+
+	productIDs := make([]string, len(products))
+	for i, product := range products {
+		productIDs[i] = product.Id
+	}
+
+	return productIDs, nil
+}

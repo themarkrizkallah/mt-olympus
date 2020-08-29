@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -39,15 +40,29 @@ func parseTopic(topic string) (string, string) {
 	return topicPrefix, prodId
 }
 
+func constructTopics(productIDs []string) []string {
+	topics := make([]string, len(productIDs)*len(topicPrefixes))
+	i := 0
+
+	for _, id := range productIDs {
+		for _, prefix := range topicPrefixes {
+			topics[i] = fmt.Sprintf("%s.%s", prefix, id)
+			i += 1
+		}
+	}
+
+	return topics
+}
+
 // Consumer represents a Sarama consumer group consumer
 type Consumer struct {
 	ready chan bool
 
 	// OrderRequest channel
-	orderRequestChan chan<- pb.OrderRequest
+	requestChan chan<- pb.OrderRequest
 
 	// OrderConf channel
-	orderConfChan chan<- pb.OrderConf
+	confChan chan<- pb.OrderConf
 
 	// TradeMessage channel
 	tradeMsgChan chan<- pb.TradeMessage
@@ -104,18 +119,21 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 			if err := proto.Unmarshal(message.Value, &request); err != nil {
 				log.Panicf("Consumer - error unmarshalling message: %s", err)
 			}
+			consumer.requestChan <- request
 
 		case "order.conf":
 			var conf pb.OrderConf
 			if err := proto.Unmarshal(message.Value, &conf); err != nil {
 				log.Panicf("Consumer - error unmarshalling message: %s", err)
 			}
+			consumer.confChan <- conf
 
 		case "trades":
 			var tradeMsg pb.TradeMessage
 			if err := proto.Unmarshal(message.Value, &tradeMsg); err != nil {
 				log.Panicf("Consumer - error unmarshalling message: %s", err)
 			}
+			consumer.tradeMsgChan <- tradeMsg
 
 		default:
 			log.Printf("Consumer - new topic %s encountered", topicPrefix)

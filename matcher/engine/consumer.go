@@ -91,6 +91,8 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 
 		switch topicPrefix {
 		case "order.request":
+			log.Println("Consumer - order request received")
+
 			var request pb.OrderRequest
 			if err := proto.Unmarshal(message.Value, &request); err != nil {
 				log.Panicf("Consumer - error unmarshalling message: %s", err)

@@ -12,11 +12,13 @@ import (
 	"hermes/proto"
 )
 
+const chanSize = 10
+
 /*
 Server supported channels are:
 	- "heartbeat"
     - "status"
-    - "ticket"
+    - "ticker"
     - "level2"
     - "user"
 	- "matches"
@@ -43,23 +45,11 @@ type Channel interface {
 	subscribeClient(client *Client, productIDs []string)
 	unsubscribeClient(client *Client, productIDs []string)
 	unsubscribeClientFromAll(client *Client)
-	broadcast(productID string, msg interface{})
+	broadcast(productID string, i interface{})
 }
 
 func newChannel(chanName string) Channel {
-	var (
-		err     error
-		channel Channel
-	)
-
-	// Need to fetch the product IDs from the database first
-	// Cache product ids
-	if len(acceptedProductIDs) == 0 {
-		acceptedProductIDs, err = database.GetProductIDs()
-		if err != nil {
-			log.Fatalln("Failed setting up channel,", err)
-		}
-	}
+	var channel Channel
 
 	switch chanName {
 	case "heartbeat":
@@ -89,32 +79,53 @@ type ChannelManager struct {
 	channels map[ChannelName]Channel
 
 	// Kafka related fields
-	consumer Consumer
-	client   sarama.ConsumerGroup
+	consumer   Consumer
+	client     sarama.ConsumerGroup
 	consumerWg *sync.WaitGroup
 
 	// OrderRequest channel
-	orderRequestChan chan proto.OrderRequest
+	requestChan <-chan proto.OrderRequest
 
 	// OrderConf channel
-	orderConfChan chan proto.OrderConf
+	confChan <-chan proto.OrderConf
 
 	// TradeMessage channel
-	tradeMsgChan chan proto.TradeMessage
+	tradeMsgChan <-chan proto.TradeMessage
 }
 
 func newChannelManager() *ChannelManager {
+	var err error
+
 	log.Println("ChannelManager - setting up consumer group...")
+
+	// Setup channels
+	requestChan := make(chan proto.OrderRequest, chanSize)
+	confChan := make(chan proto.OrderConf, chanSize)
+	tradeMsgChan := make(chan proto.TradeMessage, chanSize)
+
+	// Attach channels to consumer
 	consumer, client := newConsumerGroup(env.GetKafkaBroker())
+	consumer.requestChan = requestChan
+	consumer.confChan = confChan
+	consumer.tradeMsgChan = tradeMsgChan
 
 	cHub := &ChannelManager{
 		make(map[ChannelName]Channel, len(acceptedChanNames)),
 		consumer,
 		client,
 		&sync.WaitGroup{},
-		make(chan proto.OrderRequest),
-		make(chan proto.OrderConf),
-		make(chan proto.TradeMessage),
+		requestChan,
+		confChan,
+		tradeMsgChan,
+	}
+
+	// Need to fetch the product IDs from the database first
+	// Cache product ids
+	if len(acceptedProductIDs) == 0 {
+		acceptedProductIDs, err = database.GetProductIDs()
+		if err != nil {
+			log.Fatalln("Failed setting up channel,", err)
+		}
 	}
 
 	// Setup channels
@@ -124,11 +135,6 @@ func newChannelManager() *ChannelManager {
 		cHub.channels[chanName] = channel
 	}
 
-	// Attach channels to consumer
-	consumer.orderRequestChan = cHub.orderRequestChan
-	consumer.orderConfChan = cHub.orderConfChan
-	consumer.tradeMsgChan = cHub.tradeMsgChan
-
 	return cHub
 }
 
@@ -137,23 +143,23 @@ func (cm *ChannelManager) run(ctx context.Context, wg *sync.WaitGroup) {
 	defer cm.cleanup()
 
 	cm.consumerWg.Add(1)
-	go cm.consumer.run([]string{"order.conf"}, cm.client, cm.consumerWg, ctx)
+	go cm.consumer.run(constructTopics(acceptedProductIDs), cm.client, cm.consumerWg, ctx)
 
 	// Await till the consumer has been set up
 	<-cm.consumer.ready
 	log.Println("ChannelManager - consumer up and running!")
 
-	// TODO: Begin receiving messages
 	for {
 		select {
-		case orderRequest := <- cm.orderRequestChan:
-			log.Println("ChannelManager - received orderRequest", orderRequest)
+		case request := <-cm.requestChan:
+			log.Println("ChannelManager - received request", request)
 
-		case orderConf := <- cm.orderConfChan:
-			log.Println("ChannelManager - received orderConf", orderConf)
+		case conf := <-cm.confChan:
+			log.Println("ChannelManager - received conf", conf)
 
-		case tradeMsg := <- cm.tradeMsgChan:
+		case tradeMsg := <-cm.tradeMsgChan:
 			log.Println("ChannelManager - received tradeMsg", tradeMsg)
+			cm.channels["ticker"].broadcast("BTC-USD", tradeMsg)
 
 		// Context cancelled
 		case <-ctx.Done():
@@ -163,7 +169,7 @@ func (cm *ChannelManager) run(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
-func (cm *ChannelManager) cleanup(){
+func (cm *ChannelManager) cleanup() {
 	cm.consumerWg.Wait()
 	if err := cm.client.Close(); err != nil {
 		log.Panicf("ChannelManager - error closing client: %s", err)

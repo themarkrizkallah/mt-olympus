@@ -1,6 +1,7 @@
 package main
 
 import (
+	pb "hermes/proto"
 	"log"
 
 	"hermes/database"
@@ -63,8 +64,25 @@ type StatusChannel struct {
 	DefaultChannel
 }
 
+// The ticker channel provides real-time price updates every time a match happens.
 type TickerChannel struct {
 	DefaultChannel
+}
+
+func (tc *TickerChannel) broadcast(productID string, i interface{}) {
+	var tickerMsg TickerMessage
+
+	switch msg := i.(type) {
+	case pb.TradeMessage:
+		tickerMsg = newTickerMessage(productID, msg)
+	default:
+		log.Fatalf("TickerChannel - Received bad message from server: %+v", msg)
+	}
+
+	clients, _ := tc.productClientMap[productID]
+	for client := range clients {
+		client.message(tickerMsg)
+	}
 }
 
 type Level2Channel struct {

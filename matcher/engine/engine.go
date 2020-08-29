@@ -93,13 +93,12 @@ func (e *Engine) receiveOrder(order types.Order) (pb.OrderConf, []pb.TradeMessag
 }
 
 func (e *Engine) confirmOrder(conf pb.OrderConf) {
-	log.Printf("Engine - confirming order on %s", confTopic)
-
 	data, err := proto.Marshal(&conf)
 	if err != nil {
 		log.Panicf("Engine - error marshalling data: %s", err)
 	}
 
+	log.Printf("Engine - confirming order on %s.%s", confTopic, e.orderbook.ProductId)
 	e.producer.sendMessage(fmt.Sprintf("%s.%s", confTopic, e.orderbook.ProductId), data)
 }
 
@@ -109,6 +108,8 @@ func (e *Engine) broadcastTrades(trades []pb.TradeMessage) {
 		if err != nil {
 			log.Fatalln("Error marshalling trade:", err)
 		}
+
+		log.Printf("Engine - broadcasting trades on %s.%s", tradesTopic, e.orderbook.ProductId)
 		e.producer.sendMessage(fmt.Sprintf("%s.%s", tradesTopic, e.orderbook.ProductId), data)
 	}
 }

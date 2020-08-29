@@ -13,6 +13,7 @@ services:
       - env/postgres.env
       - env/redis.env
     environment:
+      - PORT=8080
       - KAFKA_CONS_GROUP=apollo
     depends_on:
       - db
@@ -31,6 +32,7 @@ services:
       - env/kafka.env
       - env/hermes.env
     environment:
+      - PORT=8000
       - KAFKA_CONS_GROUP=hermes
     depends_on:
       - db

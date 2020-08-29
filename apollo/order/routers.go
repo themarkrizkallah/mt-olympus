@@ -15,7 +15,10 @@ import (
 const userIdKey = "user_id"
 
 func PostOrder(c *gin.Context) {
-	var request pb.OrderRequest
+	var (
+		err error
+		request pb.OrderRequest
+	)
 
 	userId := c.GetString(userIdKey)
 
@@ -43,8 +46,7 @@ func PostOrder(c *gin.Context) {
 		return
 	}
 
-	productsMap, err := redis.GetProductsMap(c)
-	if err != nil {
+	if productsMap, err := redis.GetProductsMap(c); err != nil {
 		log.Println("Error retrieving products", err)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "An error occurred"})
 		return
@@ -55,13 +57,11 @@ func PostOrder(c *gin.Context) {
 
 	request.UserId = userId
 	request.OrderId = uuid.New().String()
-	log.Printf("Routers - Processing order request: %+v\n", request)
+	log.Println("Order Router - processing order request\n")
 
 	confChan, err := kafka.SendOrderRequest(request)
-	conf := <-confChan
-
-	// Get OrderConf and only keep relevant fields
-	conf.UserId = ""
-
-	c.JSON(http.StatusOK, conf)
+	if err != nil {
+		log.Fatalln("Order Router - Error sending request to kafka:", err)
+	}
+	c.JSON(http.StatusOK, newConf(<-confChan))
 }

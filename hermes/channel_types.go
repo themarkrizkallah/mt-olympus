@@ -100,4 +100,3 @@ type MatchesChannel struct {
 type FullChannel struct {
 	DefaultChannel
 }
-

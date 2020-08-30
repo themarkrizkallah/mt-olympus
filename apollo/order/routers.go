@@ -24,7 +24,7 @@ func PostOrder(c *gin.Context) {
 
 	if err := c.BindJSON(&request); err != nil {
 		log.Println("Error parsing payload:", err)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Could not parse payload"})
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "bad request"})
 		return
 	}
 

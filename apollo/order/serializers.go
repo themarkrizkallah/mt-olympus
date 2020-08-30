@@ -1,10 +1,11 @@
 package order
 
 import (
-	pb "apollo/proto"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
+
+	pb "apollo/proto"
 )
 
 type ConfJSON struct {

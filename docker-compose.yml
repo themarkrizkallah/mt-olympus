@@ -30,7 +30,6 @@ services:
     env_file:
       - env/postgres.env
       - env/kafka.env
-      - env/hermes.env
     environment:
       - PORT=8000
       - KAFKA_CONS_GROUP=hermes

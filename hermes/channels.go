@@ -9,7 +9,7 @@ import (
 
 	"hermes/database"
 	"hermes/env"
-	"hermes/proto"
+	pb "hermes/proto"
 )
 
 const chanSize = 10
@@ -84,13 +84,13 @@ type ChannelManager struct {
 	consumerWg *sync.WaitGroup
 
 	// OrderRequest channel
-	requestChan <-chan proto.OrderRequest
+	requestChan <-chan pb.OrderRequest
 
 	// OrderConf channel
-	confChan <-chan proto.OrderConf
+	confChan <-chan pb.OrderConf
 
 	// TradeMessage channel
-	tradeMsgChan <-chan proto.TradeMessage
+	tradeMsgChan <-chan pb.TradeMessage
 }
 
 func newChannelManager() *ChannelManager {
@@ -99,9 +99,9 @@ func newChannelManager() *ChannelManager {
 	log.Println("ChannelManager - setting up consumer group...")
 
 	// Setup channels
-	requestChan := make(chan proto.OrderRequest, chanSize)
-	confChan := make(chan proto.OrderConf, chanSize)
-	tradeMsgChan := make(chan proto.TradeMessage, chanSize)
+	requestChan := make(chan pb.OrderRequest, chanSize)
+	confChan := make(chan pb.OrderConf, chanSize)
+	tradeMsgChan := make(chan pb.TradeMessage, chanSize)
 
 	// Attach channels to consumer
 	consumer, client := newConsumerGroup(env.GetKafkaBroker())
@@ -159,7 +159,7 @@ func (cm *ChannelManager) run(ctx context.Context, wg *sync.WaitGroup) {
 
 		case tradeMsg := <-cm.tradeMsgChan:
 			log.Println("ChannelManager - received tradeMsg", tradeMsg)
-			cm.channels["ticker"].broadcast("BTC-USD", tradeMsg)
+			cm.processTradeMessage(tradeMsg)
 
 		// Context cancelled
 		case <-ctx.Done():
@@ -199,4 +199,16 @@ func (cm *ChannelManager) unregisterClient(c *Client, chanName ChannelName) {
 	} else {
 		log.Fatalln("ChannelManager - Fatal error, invalid channel name", chanName)
 	}
+}
+
+func (cm *ChannelManager) processOrderRequest(request pb.OrderRequest) {
+
+}
+
+func (cm *ChannelManager) processOrderConf(conf pb.OrderConf) {
+
+}
+
+func (cm *ChannelManager) processTradeMessage(tradeMsg pb.TradeMessage) {
+	cm.channels["ticker"].broadcast("BTC-USD", tradeMsg)
 }

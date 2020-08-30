@@ -15,7 +15,6 @@ import (
 
 	"matcher/env"
 	pb "matcher/proto"
-	"matcher/types"
 )
 
 // Sarama configuration options
@@ -29,9 +28,9 @@ const (
 
 // Consumer represents a Sarama consumer group consumer
 type Consumer struct {
-	ready     chan bool
-	topics    []string
-	orderChan chan types.Order
+	ready    chan bool
+	topics   []string
+	requests chan pb.OrderRequest
 }
 
 // Parse topic and return the topic prefix and product-id
@@ -84,7 +83,7 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 	// Do not move the code below to a goroutine.
 	// The `ConsumeClaim` itself is called within a goroutine, see:
 	// https://github.com/Shopify/sarama/blob/master/consumer_group.go#L27-L29
-	//orderbook := getOrderBook()
+	//orderBook := getOrderBook()
 
 	for message := range claim.Messages() {
 		topicPrefix, _ := parseTopic(message.Topic)
@@ -97,7 +96,7 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 			if err := proto.Unmarshal(message.Value, &request); err != nil {
 				log.Panicf("Consumer - error unmarshalling message: %s", err)
 			}
-			consumer.orderChan <- types.OrderFromOrderRequest(&request)
+			consumer.requests <- request
 		default:
 			log.Printf("Consumer - new topic %s encountered", topicPrefix)
 		}

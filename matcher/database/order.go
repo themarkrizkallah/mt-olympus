@@ -2,9 +2,9 @@ package database
 
 import (
 	"database/sql"
+	"github.com/golang/protobuf/ptypes"
 	"log"
-
-	"matcher/types"
+	pb "matcher/proto"
 )
 
 const (
@@ -14,7 +14,7 @@ values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 	updateOrderSql = `update orders set status = $1 where id = $2`
 )
 
-func InsertOrder(tx *sql.Tx, order types.Order, status, productId string) error {
+func InsertOrder(tx *sql.Tx, conf pb.OrderConf, productId string) error {
 	var err error = nil
 
 	stmt, err := tx.Prepare(insertOrderSql)
@@ -23,22 +23,24 @@ func InsertOrder(tx *sql.Tx, order types.Order, status, productId string) error 
 	}
 	defer stmt.Close()
 
+	t, _ := ptypes.Timestamp(conf.GetCreatedAt())
+
 	_, err = stmt.Exec(
-		order.OrderId,
+		conf.GetOrderId(),
 		productId,
-		order.UserId,
-		order.Amount,
-		order.Price,
-		order.Type.String(),
-		order.Side.Number(),
-		status,
-		order.CreatedAt,
+		conf.GetUserId(),
+		conf.GetAmount(),
+		conf.GetPrice(),
+		conf.GetType().String(),
+		conf.GetSide().Number(),
+		conf.GetStatus(),
+		t,
 	)
 
 	return err
 }
 
-func UpdateOrderStatus(tx *sql.Tx, orderUpdate types.OrderUpdate) error {
+func UpdateOrderStatus(tx *sql.Tx, id, status string) error {
 	var err error = nil
 
 	stmt, err := tx.Prepare(updateOrderSql)
@@ -47,8 +49,8 @@ func UpdateOrderStatus(tx *sql.Tx, orderUpdate types.OrderUpdate) error {
 	}
 	defer stmt.Close()
 
-	log.Printf("Updating order %v: %v\n", orderUpdate.OrderId, orderUpdate.Status)
-	_, err = stmt.Exec(orderUpdate.Status, orderUpdate.OrderId)
+	log.Printf("Updating order %v: %v\n", id, status)
+	_, err = stmt.Exec(status, id)
 
 	return err
 }

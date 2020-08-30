@@ -38,15 +38,14 @@ func PutHold(tx *sql.Tx, userId, assetId string, amount int64) error {
 	return err
 }
 
-func TransferValue(tx *sql.Tx, trade *types.Trade, baseId, quoteId string) error {
+
+type MatchMetadata struct {
+	Size, Price          int64
+	BidPrice             int64
+	BidUserId, AskUserId string
+}
+func TransferValue(tx *sql.Tx, meta MatchMetadata, baseId, quoteId string) error {
 	var err error = nil
-
-	buyOrder := trade.Buy
-	sellOrder := trade.Sell
-	tradeMsg := &trade.TradeMsg
-
-	price := tradeMsg.GetPrice()
-	amount := tradeMsg.GetAmount()
 
 	// Reduce Buyer QUOTE hold and balance
 	stmt, err := tx.Prepare(transferHoldSql)
@@ -54,7 +53,7 @@ func TransferValue(tx *sql.Tx, trade *types.Trade, baseId, quoteId string) error
 		return err
 	}
 	defer stmt.Close()
-	if _, err = stmt.Exec(-(amount * price), -(amount * buyOrder.Price), quoteId, buyOrder.UserId); err != nil {
+	if _, err = stmt.Exec(-(meta.Size * meta.Price), -(meta.Size * meta.Price), quoteId, meta.BidUserId); err != nil {
 		return err
 	}
 
@@ -64,7 +63,7 @@ func TransferValue(tx *sql.Tx, trade *types.Trade, baseId, quoteId string) error
 		return err
 	}
 	defer stmt.Close()
-	if _, err = stmt.Exec(-amount, -amount, baseId, sellOrder.UserId); err != nil {
+	if _, err = stmt.Exec(-meta.Size, -meta.Size, baseId, meta.AskUserId); err != nil {
 		return err
 	}
 
@@ -74,7 +73,7 @@ func TransferValue(tx *sql.Tx, trade *types.Trade, baseId, quoteId string) error
 		return err
 	}
 	defer stmt.Close()
-	if _, err = stmt.Exec(amount, baseId, buyOrder.UserId); err != nil {
+	if _, err = stmt.Exec(meta.Size, baseId, meta.BidUserId); err != nil {
 		return err
 	}
 
@@ -84,7 +83,7 @@ func TransferValue(tx *sql.Tx, trade *types.Trade, baseId, quoteId string) error
 		return err
 	}
 	defer stmt.Close()
-	if _, err = stmt.Exec(amount * tradeMsg.Price, quoteId, sellOrder.UserId); err != nil {
+	if _, err = stmt.Exec(meta.Size * meta.Price, quoteId, meta.AskUserId); err != nil {
 		return err
 	}
 

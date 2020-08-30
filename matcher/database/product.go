@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 )
@@ -19,14 +20,14 @@ func GetProduct(base, quote string) (Product, error) {
 	ctx, _ := context.WithTimeout(context.Background(), 1*time.Second)
 
 	// Get product info
-	product := Product{Id: base + "-" + quote}
+	product := Product{Id: fmt.Sprintf("%s-%s", base, quote)}
 	err := db.QueryRowContext(ctx, getProductSql, product.Id).Scan(
 		&product.BaseId,
 		&product.QuoteId,
 		&product.CreatedAt,
 	)
 	if err != nil {
-		log.Println("An error occurred getting assets:", err)
+		log.Println("Database - an error occurred getting product:", err)
 		return Product{}, err
 	}
 

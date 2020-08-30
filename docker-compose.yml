@@ -47,6 +47,8 @@ services:
       - env/postgres.env
       - matcher/.env
     environment:
+      - BASE=BTC
+      - QUOTE=USD
       - KAFKA_CONS_GROUP=matcher
     depends_on:
       - broker

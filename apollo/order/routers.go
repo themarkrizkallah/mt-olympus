@@ -1,8 +1,10 @@
 package order
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -59,9 +61,17 @@ func PostOrder(c *gin.Context) {
 	request.OrderId = uuid.New().String()
 	log.Println("Order Router - processing order request\n")
 
+	ctx, _ := context.WithTimeout(c, 5 * time.Second)
+
 	confChan, err := kafka.SendOrderRequest(request)
 	if err != nil {
 		log.Fatalln("Order Router - Error sending request to kafka:", err)
 	}
-	c.JSON(http.StatusOK, newConf(<-confChan))
+
+	select {
+	case conf := <- confChan:
+		c.JSON(http.StatusOK, newConf(conf))
+	case <-ctx.Done():
+		c.JSON(http.StatusGatewayTimeout, gin.H{"error": "did not receive confirmation from matching engine in time"})
+	}
 }

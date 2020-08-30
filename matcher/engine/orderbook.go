@@ -3,7 +3,9 @@ package engine
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -13,29 +15,229 @@ import (
 	"matcher/types"
 )
 
-const capacity = 100
+const (
+	minPrice             = 1
+	maxPrice             = 10000000
+	priceLevelBufferSize = 20
+)
 
-// BuyOrders: sorted in ascending order
-// SellOrders: sorted in descending order
 type OrderBook struct {
-	Base, Quote     string
-	BaseId, QuoteId string
-	ProductId       string
-	BuyOrders       []types.Order
-	SellOrders      []types.Order
+	baseId, quoteId string
+	productId       string
+	asks, bids      []*PriceLevel
+	orderPriceMap   map[string]*PriceLevel
 }
 
-// Process an order and return the trades generated before adding the remaining amount to the market
-func (ob *OrderBook) Process(order types.Order) (pb.OrderConf, []pb.TradeMessage) {
+func newOrderBook(base, quote string) *OrderBook {
+	product, err := database.GetProduct(base, quote)
+	if err != nil {
+		log.Fatalln("OrderBook - error retrieving product info:", err)
+	}
+
+	orderBook := &OrderBook{
+		baseId:        product.BaseId,
+		quoteId:       product.QuoteId,
+		productId:     product.Id,
+		asks:          make([]*PriceLevel, 0, priceLevelBufferSize),
+		bids:          make([]*PriceLevel, 0, priceLevelBufferSize),
+		orderPriceMap: make(map[string]*PriceLevel),
+	}
+
+	for i := int64(0); i < maxPrice-minPrice+1; i += 1 {
+		orderBook.bids = append(orderBook.bids, NewPriceLevel(i+minPrice))
+	}
+
+	return orderBook
+}
+
+func (ob *OrderBook) PriceLevel(price int64) *PriceLevel {
+	return ob.bids[price-minPrice]
+}
+
+func (ob *OrderBook) NewPriceLevel(price int64, side pb.Side) error {
+	if price < minPrice || price > maxPrice {
+		return errors.New("error: price out of bounds")
+	}
+
+	switch side {
+	case pb.Side_SELL:
+		// Compute insertion position
+		i := sort.Search(len(ob.asks), func(i int) bool {
+			return (i == len(ob.asks) - 1) ||
+				(i == 0 && price > ob.asks[i+1].price) ||
+				(i > 0 && price < ob.asks[i-1].price && price > ob.asks[i+1].price)
+		})
+
+		ob.asks = append(ob.asks, ob.asks[len(ob.bids)-1])
+		copy(ob.asks[i+1:], ob.asks[i:])
+		ob.asks[i] = NewPriceLevel(price)
+
+	case pb.Side_BUY:
+		// Compute insertion position
+		i := sort.Search(len(ob.bids), func(i int) bool {
+			return (i == len(ob.bids) - 1) ||
+				(i == 0 && price < ob.bids[i+1].price) ||
+				(i > 0 && price > ob.bids[i-1].price && price < ob.bids[i+1].price)
+		})
+
+		ob.bids = append(ob.bids, ob.bids[len(ob.bids)-1])
+		copy(ob.bids[i+1:], ob.bids[i:])
+		ob.bids[i] = NewPriceLevel(price)
+	}
+
+	return nil
+}
+
+func (ob *OrderBook) AddOrder(order Order, price int64) {
+
+}
+
+func (ob *OrderBook) processLimitAsk(ask Order, askPrice int64) (OrderUpdate, []Match, []OrderUpdate) {
+	const side = pb.Side_SELL
+
 	var (
-		account      types.Account
-		orderConf    pb.OrderConf
-		orderUpdates []types.OrderUpdate
-		trades       []types.Trade
-		tx           *sql.Tx
-		err          error
+		askUpdate  OrderUpdate
+		allMatches []Match
+		allUpdates []OrderUpdate
 	)
-	order.CreatedAt = time.Now()
+
+	if askPrice < minPrice || askPrice > maxPrice {
+		log.Fatalln("OrderBook - cannot process limit ask, askPrice out of range")
+	}
+
+	askSize := ask.size
+	askUpdate = OrderUpdate{id: ask.id, status: confirmStatus, size: 0}
+
+	// Check if we have at least one matching order
+	if
+
+	return askUpdate, allMatches, allUpdates
+}
+
+//func (ob *OrderBook) processLimitAsk(ask Order, askPrice int64) (OrderUpdate, []Match, []OrderUpdate) {
+//	const side = pb.Side_SELL
+//
+//	var (
+//		askUpdate  OrderUpdate
+//		allMatches []Match
+//		allUpdates []OrderUpdate
+//	)
+//
+//	if askPrice < minPrice || askPrice > maxPrice {
+//		log.Fatalln("OrderBook - cannot process limit ask, askPrice out of range")
+//	}
+//
+//	askSize := ask.size
+//	askUpdate = OrderUpdate{id: ask.id, status: confirmStatus, size: 0}
+//
+//	// Retrieve max bids, if no bids, add ask to order book and return
+//	if max, ok := ob.maxHeap.Peek(); !ok {
+//		ob.PriceLevel(askPrice).AddOrder(ask, side)
+//		return askUpdate, []Match{}, []OrderUpdate{}
+//	}
+//
+//	// ask price is higher than maximum bid, add ask to order book and return
+//	if askPrice > ob.maxBid {
+//		ob.PriceLevel(askPrice).AddOrder(ask, side)
+//		return askUpdate, []Match{}, []OrderUpdate{}
+//	}
+//
+//	// Check price levels from the max bid price to the limit ask price
+//	for price := ob.maxBid; price <= askPrice && askUpdate.size < askSize; price -= 1 {
+//		if ob.PriceLevel(price).NumBids() == 0 {
+//			continue
+//		}
+//
+//		update, matches, updates := ob.bids[price-minPrice].ProcessAsk(ask)
+//
+//		// Update ask status, matches, and updates
+//		ask.size -= update.size
+//		askUpdate.Update(update)
+//		allMatches = append(allMatches, matches...)
+//		allUpdates = append(allUpdates, updates...)
+//	}
+//
+//	// Partial fill, add ask to order book
+//	if askUpdate.size < askSize {
+//		ob.PriceLevel(askPrice).AddOrder(ask, side)
+//	}
+//
+//	return askUpdate, allMatches, allUpdates
+//}
+
+func (ob *OrderBook) processLimitBid(bid Order, bidPrice int64) (OrderUpdate, []Match, []OrderUpdate) {
+	const side = pb.Side_BUY
+
+	var (
+		bidUpdate  OrderUpdate
+		allMatches []Match
+		allUpdates []OrderUpdate
+	)
+
+	if bidPrice < minPrice || bidPrice > maxPrice {
+		log.Fatalln("OrderBook - cannot process limit bid, bidPrice out of range")
+	}
+
+	bidSize := bid.size
+	bidUpdate = OrderUpdate{id: bid.id, status: confirmStatus, size: 0}
+
+	// bid price is lower than minimum ask price, add to order book and return
+	if ob.minAsk == 0 || bidPrice < ob.minAsk {
+		ob.PriceLevel(bidPrice).AddOrder(bid, side)
+		return bidUpdate, []Match{}, []OrderUpdate{}
+	}
+
+	// Check price levels from min ask to the limit bid price
+	for price := ob.minAsk; price >= bidPrice && bidUpdate.size < bidSize; price += 1 {
+		if ob.PriceLevel(price).NumBids() == 0 {
+			continue
+		}
+
+		update, matches, updates := ob.PriceLevel(price).ProcessAsk(bid)
+
+		// Update bid status, matches, and updates
+		bid.size -= update.size
+		bidUpdate.Update(update)
+		allMatches = append(allMatches, matches...)
+		allUpdates = append(allUpdates, updates...)
+	}
+
+	// Partial fill, add bid to order book
+	if bidUpdate.size < bidSize {
+		ob.PriceLevel(bidPrice).AddOrder(bid, side)
+	}
+
+	return bidUpdate, allMatches, allUpdates
+}
+
+func (ob *OrderBook) Process(request pb.OrderRequest) (pb.OrderConf, []pb.TradeMessage) {
+	var (
+		account     types.Account
+		orderUpdate OrderUpdate
+		updates     []OrderUpdate
+		matches     []Match
+		tx          *sql.Tx
+		err         error
+	)
+
+	order := Order{
+		id:         request.GetOrderId(),
+		userId:     request.GetUserId(),
+		size:       request.GetAmount(),
+		receivedAt: time.Now(),
+	}
+	ts, _ := ptypes.TimestampProto(order.receivedAt)
+	conf := pb.OrderConf{
+		UserId:    request.GetUserId(),
+		OrderId:   request.GetOrderId(),
+		Amount:    request.GetAmount(),
+		Price:     request.GetPrice(),
+		Side:      request.GetSide(),
+		Type:      request.GetType(),
+		Status:    "Rejected",
+		CreatedAt: ts,
+	}
+	requestVolume := request.GetPrice() * request.GetAmount()
 
 	tx, err = database.GetDB().BeginTx(
 		context.Background(),
@@ -45,147 +247,93 @@ func (ob *OrderBook) Process(order types.Order) (pb.OrderConf, []pb.TradeMessage
 		},
 	)
 	if err != nil {
-		log.Fatalln("Error beginning trade transaction:", err)
+		log.Fatalln("OrderBook - error beginning trade transaction:", err)
 	}
 
-	if order.Side == pb.Side_BUY {
-		if account, err = database.GetAccount(tx, order.UserId, ob.QuoteId); err != nil {
-			log.Fatalln("Error reading user account:", err)
+	switch request.GetSide() {
+	case pb.Side_BUY:
+		if account, err = database.GetAccount(tx, order.userId, ob.quoteId); err != nil {
+			log.Fatalln("OrderBook - error reading user account:", err)
 		}
 
 		// Reject order if user's available balance isn't enough to fund the buy order
-		if account.AvailableBalance() < order.Amount*order.Price {
-			ts, _ := ptypes.TimestampProto(order.CreatedAt)
-			orderConf = pb.OrderConf{
-				UserId:    order.UserId,
-				OrderId:   order.OrderId,
-				Amount:    order.Amount,
-				Price:     order.Price,
-				Side:      order.Side,
-				Type:      order.Type,
-				Status:    "Rejected",
-				CreatedAt: ts,
-			}
-
-			return orderConf, []pb.TradeMessage{}
+		if account.AvailableBalance() < requestVolume {
+			conf.Status = rejectedStatus
+			return conf, []pb.TradeMessage{}
 		}
 
-		if err := database.PutHold(tx, order.UserId, ob.QuoteId, order.Amount*order.Price); err != nil {
-			log.Fatalln("Error putting hold on account for buy order:", err)
+		if err := database.PutHold(tx, order.userId, ob.quoteId, requestVolume); err != nil {
+			log.Fatalln("OrderBook - error putting hold on account for buy order:", err)
 		}
-		orderConf, trades, orderUpdates = ob.processLimitBuy(order)
-	} else {
-		if account, err = database.GetAccount(tx, order.UserId, ob.BaseId); err != nil {
-			log.Fatalln("Error reading user account:", err)
+		orderUpdate, matches, updates = ob.processLimitBid(order, request.GetPrice())
+
+	case pb.Side_SELL:
+		if account, err = database.GetAccount(tx, order.userId, ob.baseId); err != nil {
+			log.Fatalln("OrderBook - error reading user account:", err)
 		}
 
 		// Reject order if user's available balance isn't enough to fund the sell order
-		if account.AvailableBalance() < order.Amount {
-			ts, _ := ptypes.TimestampProto(order.CreatedAt)
-			orderConf = pb.OrderConf{
-				UserId:    order.UserId,
-				OrderId:   order.OrderId,
-				Amount:    order.Amount,
-				Price:     order.Price,
-				Side:      order.Side,
-				Type:      order.Type,
-				Status:    "Rejected",
-				CreatedAt: ts,
-			}
-			return orderConf, []pb.TradeMessage{}
+		if account.AvailableBalance() < request.GetAmount() {
+			conf.Status = rejectedStatus
+			return conf, []pb.TradeMessage{}
 		}
 
-		if err := database.PutHold(tx, order.UserId, ob.BaseId, order.Amount); err != nil {
-			log.Fatalln("Error putting hold on account for sell order:", err)
+		if err := database.PutHold(tx, order.userId, ob.baseId, order.size); err != nil {
+			log.Fatalln("OrderBook - error putting hold on account for sell order:", err)
 		}
-		orderConf, trades, orderUpdates = ob.processLimitSell(order)
+		orderUpdate, matches, updates = ob.processLimitAsk(order, request.GetPrice())
 	}
+
+	conf.Status = orderUpdate.status
 
 	// Insert the order in the database
-	if err = database.InsertOrder(tx, order, orderConf.GetStatus(), ob.ProductId); err != nil {
-		log.Fatalln("Error inserting order", err)
+	if err = database.InsertOrder(tx, conf, ob.productId); err != nil {
+		log.Fatalln("OrderBook - error inserting order", err)
 	}
 
-	// Update the relevant orderChan
-	for _, orderUpdate := range orderUpdates {
-		if err = database.UpdateOrderStatus(tx, orderUpdate); err != nil {
-			log.Fatalln("Error updating order value", err)
+	// Update the relevant orders
+	for _, update := range updates {
+		if update.id != order.id {
+			if err = database.UpdateOrderStatus(tx, update.id, update.status); err != nil {
+				log.Fatalln("OrderBook - error updating order value", err)
+			}
 		}
 	}
 
-	// Reflect the value transfer in the DB and remove holds (if appropriate)
-	for _, trade := range trades {
-		if err = database.TransferValue(tx, &trade, ob.BaseId, ob.QuoteId); err != nil {
-			log.Fatalln("Error transferring value", err)
+	// Reflect the value transfer in the databse and remove holds as applicable
+	for _, match := range matches {
+		var (
+			bidPrice             int64
+			bidUserId, askUserId string
+		)
+
+		switch request.GetSide() {
+		case pb.Side_BUY:
+			bidPrice = request.GetPrice()
+			bidUserId = request.GetUserId()
+			askUserId = match.makerId
+		case pb.Side_SELL:
+			bidPrice = match.price
+			bidUserId = match.makerId
+			askUserId = request.GetUserId()
+		}
+
+		meta := database.MatchMetadata{
+			Size:      match.size,
+			Price:     match.price,
+			BidPrice:  bidPrice,
+			BidUserId: bidUserId,
+			AskUserId: askUserId,
+		}
+
+		if err = database.TransferValue(tx, meta, ob.baseId, ob.quoteId); err != nil {
+			log.Fatalln("OrderBook - error transferring value", err)
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		log.Fatalln("Error committing transaction:", err)
+		log.Fatalln("OrderBook - error committing transaction:", err)
 	}
 
-	return orderConf, types.TradesToMessages(trades)
-}
-
-func (ob *OrderBook) addBuyOrder(order types.Order) {
-	n := len(ob.BuyOrders)
-	i := n
-
-	for i = n - 1; i >= 0; i-- {
-		if ob.BuyOrders[i].Price < order.Price {
-			break
-		}
-	}
-
-	i++
-	ob.BuyOrders = append(ob.BuyOrders, order)
-
-	if i <= n-1 {
-		copy(ob.BuyOrders[i+1:], ob.BuyOrders[i:])
-		ob.BuyOrders[i] = order
-	}
-}
-
-func (ob *OrderBook) addSellOrder(order types.Order) {
-	n := len(ob.SellOrders)
-	i := n
-
-	for i = n - 1; i >= 0; i-- {
-		if ob.SellOrders[i].Price > order.Price {
-			break
-		}
-	}
-
-	i++
-	ob.SellOrders = append(ob.SellOrders, order)
-
-	if i <= n-1 {
-		copy(ob.SellOrders[i+1:], ob.SellOrders[i:])
-		ob.SellOrders[i] = order
-	}
-}
-
-func (ob *OrderBook) removeBuyOrder(i int) {
-	ob.BuyOrders = append(ob.BuyOrders[:i], ob.BuyOrders[i+1:]...)
-}
-
-func (ob *OrderBook) removeSellOrder(i int) {
-	ob.SellOrders = append(ob.SellOrders[:i], ob.SellOrders[i+1:]...)
-}
-
-func newOrderBook(base, quote string) *OrderBook {
-	product, err := database.GetProduct(base, quote)
-	if err != nil {
-		log.Fatalln("Error retrieving product info:", err)
-	}
-
-	return &OrderBook{
-		Base:       base,
-		Quote:      quote,
-		BaseId:     product.BaseId,
-		QuoteId:    product.QuoteId,
-		ProductId:  product.Id,
-		BuyOrders:  make([]types.Order, 0, capacity),
-		SellOrders: make([]types.Order, 0, capacity),
-	}
+	return conf, matchesToTrades(matches, request.GetSide(), ob.productId)
 }
